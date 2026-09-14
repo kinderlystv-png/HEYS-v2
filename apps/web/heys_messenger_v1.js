@@ -1430,9 +1430,31 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     });
   }
 
-  function getThreadSubtitle(messages, loading) {
+  // Подзаголовок шапки: состояние ответа, а не время последней реплики.
+  //
+  // Механика названа дизайнером 13 сентября: отметка о прочтении ставится в тот
+  // момент, когда собеседник открыл последнее СВОЁ ВХОДЯЩЕЕ сообщение — то есть
+  // наше последнее. Строки «отвечает обычно за час» здесь нет и быть не может:
+  // среднее время ответа куратора в продукте нигде не считается, а обещать то,
+  // чего не считаем, нельзя. Заведём копилку — вернёмся к строке.
+  //
+  // Слово без рода: «прочитано», не «прочитала». Пола куратора в базе нет вовсе
+  // — имя приходит одной строкой, — и гендерная форма была бы ошибкой на каждом
+  // экране у куратора-мужчины. Решение владельца 14 сентября.
+  function getThreadSubtitle(messages, loading, viewerRole) {
     if (loading) return 'История загружается';
     if (!Array.isArray(messages) || messages.length === 0) return 'Диалог пока пуст';
+    if (viewerRole) {
+      for (let i = messages.length - 1; i >= 0; i -= 1) {
+        const message = messages[i];
+        if (!message || message.sender_role !== viewerRole) continue;
+        // Своё последнее сообщение найдено: прочитано — говорим когда, нет —
+        // молчим про прочтение и показываем время последней реплики треда.
+        return message.read_at
+          ? `прочитано · ${formatTime(message.read_at)}`
+          : `Последнее сообщение ${formatTime(messages[messages.length - 1]?.created_at)}`;
+      }
+    }
     const last = messages[messages.length - 1];
     return `Последнее сообщение ${formatTime(last?.created_at)}`;
   }
@@ -4480,7 +4502,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
           isCurator,
           subtitle: isOffline()
             ? 'нет сети — синхронизируем позже'
-            : getThreadSubtitle(messages, loading),
+            : getThreadSubtitle(messages, loading, viewerRole),
           offline: isOffline(),
           onClose,
           searchMode: searchOpen,
@@ -5304,6 +5326,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     FabButton,
     _test: {
       compareMessagesAsc,
+      getThreadSubtitle,
       mergeMessagePage,
       mergeLatestMessagePage,
       getPrependScrollTop,
