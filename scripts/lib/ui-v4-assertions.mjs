@@ -263,8 +263,12 @@ function collectMatches(value) {
     add(match, 'color', 'background', { css: 'transparent' });
   }
 
+  // Запасное семейство читается вместе с основным. 61-я сборка дописала
+  // `,sans-serif` к каждому начертанию пакета, и разбор, останавливавшийся на
+  // запятой, оставлял «sans-serif» непонятым куском: строка получала статус
+  // «разобрана частично» на ровном месте — полторы тысячи строк разом.
   const fontPattern = new RegExp(
-    String.raw`шрифт\s+(\d{3})\s+(${NUMBER_SOURCE})\s*px\s*\/\s*(${NUMBER_SOURCE})(px|%)?\s+([\p{L}][\p{L}\p{N} -]*?)(?=\s*(?:,|;|$))`,
+    String.raw`шрифт\s+(\d{3})\s+(${NUMBER_SOURCE})\s*px\s*\/\s*(${NUMBER_SOURCE})(px|%)?\s+([\p{L}][\p{L}\p{N} -]*?(?:\s*,\s*(?:sans-serif|serif|monospace|system-ui|cursive|fantasy))*)(?=\s*(?:,|;|$))`,
     'giu',
   );
   for (const match of value.matchAll(fontPattern)) {

@@ -75,6 +75,17 @@ export const ALLOWED_NA_KINDS = Object.freeze([
 // Два числа выросли и это настоящий прогресс: reports-insights 121→122 и
 // subscription 36→37 — последние пять «≠» старой формы получили причину и
 // ссылку на разбор, legacy-долг стал нулевым во всех зонах разом.
+// 14 сентября, вечер, шестьдесят первая сборка: числа почти не двинулись, и
+// это стоило отдельной работы. Сборка дописала к каждому начертанию запасное
+// семейство шрифта — отпечатки 1435 строк разошлись на одном этом, и
+// перехеширование сняло с них вердикты. Факт при этом не менялся ни в одной,
+// поэтому вердикты вернули строкам, у которых различие было только в шрифте:
+// 1412 штук в семи зонах. Осталось снятым 53 строки, изменившиеся по существу,
+// плюс 11 новых. Иначе один косметический проход сборки стёр бы накопленный
+// разбор семи зон, и на его восстановление ушли бы недели.
+// Отпечатки при этом другие, чем были, — поэтому здесь новые цифры у тех же
+// чисел: nutrition-tab 206→201 и strength-builder 53→52 (это настоящее
+// изменение), у остальных сменился только отпечаток.
 export const LEGACY_SCHEMA_BASELINE = Object.freeze({
   'app-splash': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -226,7 +237,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 08.09: все 1481 «—» получили naKind (scripts/.hw-neq-nakind-finalize.mjs):
     // handoff 758, demo-only 590, foreign-zone 133; notApplicable 1356 → 0.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [38, '5b531b3a82026aaa'],
+    typedMismatch: [37, 'ea40d278b34fb41a'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   login: Object.freeze({
@@ -268,7 +279,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // на undo-bar:83; остальное в строке (текст «Записано в …», 6 с, оба пути
     // записи, капсула на открытом дне) сошлось.
     typedMismatch: [1, '69e78db8bfe74645'],
-    notApplicable: [206, 'c890a5488f80ffbb'],
+    notApplicable: [201, 'd3c96aa5b170ca47'],
   }),
   'product-card': Object.freeze({
     // 06.09, вечер: 344 legacy «≠» типизированы owner-decision по критерию
@@ -433,7 +444,7 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // панель, итоги ·58 «Готово»); один новый «≠» итоги ·57 «В шаблоны» нет в коде.
     // typedMismatch 80 → 79. Три designer-removed ключа сняты rehash — notApplicable
     // 105 → 103.
-    typedMismatch: [53, 'af2bba2319bbdedb'],
+    typedMismatch: [52, '7d95bc694da35145'],
     notApplicable: [76, '0c5710116f1f3827'],
   }),
   // Зона заведена 05.09 вместе с первым разбором: прежде записи не было, и

@@ -101,9 +101,9 @@
       "h": "cc21ada7f434"
     },
     "состояние живёт в номере": {
-      "v": "=",
-      "f": "А1б: .is-exercise-open .sb-ap-num ink .62/bg (750:3854-3862); Г4 gr/acs только .is-weight-entry (750:5260+); класс is-weight-entry — weightEditSessionContext (builder_ui:2034+).",
-      "h": "5a16bcb53558"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: А1б: .is-exercise-open .sb-ap-num ink .62/bg (750:3854-3862); Г4 gr/acs только .is-weight-entry (750:5260+); класс is-weight-entry — weightEditSessionContext (builder_ui:2034+).",
+      "h": "6967d3ea45d1"
     },
     "шапка сессии": {
       "v": "=",
@@ -648,9 +648,9 @@
       "h": "8adee798fb2c"
     },
     "вид · разминка и дроп-сет": {
-      "v": "=",
-      "f": "WarmupDropScreen (strength/heys_strength_superset_ui_v1.js): сетка 56/1fr/1fr/44, разм. 10px ink 56%, дроп padding-left 34px и .sb-wd-drop-tag на --c2/--ac; объём .sb-wd-volume; вход view=warmup-drop из шторки и карточки. Смоук: strength-builder-warmup-drop-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
-      "h": "6d44775adea0"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: WarmupDropScreen (strength/heys_strength_superset_ui_v1.js): сетка 56/1fr/1fr/44, разм. 10px ink 56%, дроп padding-left 34px и .sb-wd-drop-tag на --c2/--ac; объём .sb-wd-volume; вход view=warmup-drop из шторки и карточки. Смоук: strength-builder-warmup-drop-v4-canvas-contract.test.js. · пакет 47: проза контракта уточнена, код сверен в приёмке.",
+      "h": "f6007f0d1160"
     },
     "вид · пустая тренировка": {
       "v": "=",
@@ -9950,18 +9950,16 @@
       "h": "32f6f04d630b"
     },
     "ряд фильтров каталога": {
-      "v": "≠",
-      "f": "Укладка сведена 13 сентября: .sb-catalog-screen .sb-chips переведён с flex-wrap:wrap на nowrap + overflow-x:auto без полосы прокрутки, чипы не сжимаются. Расходится состав чипов: строка называет четырнадцать групп, которых в продукте нет (Ноги, Шея, Голень, Разгибатели) вместо четырёх, которые есть (Поясница, Квадрицепс, Бицепс бедра, Приводящие), и внутри себя держит «Икры» и «Голень» как разные. Список групп закрыт решением владельца 9 августа — по нему считается объём. Разбор — UI_V4_FINDINGS.md#strength-catalog-filter-groups-differ-from-product.",
-      "h": "83638dcdc124",
-      "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-catalog-filter-groups-differ-from-product"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Укладка сведена 13 сентября: .sb-catalog-screen .sb-chips переведён с flex-wrap:wrap на nowrap + overflow-x:auto без полосы прокрутки, чипы не сжимаются. Расходится состав чипов: строка называет четырнадцать групп, которых в продукте нет (Ноги, Шея, Голень, Разгибатели) вместо четырёх, которые есть (Поясница, Квадрицепс, Бицепс бедра, Приводящие), и внутри себя держит «Икры» и «Голень» как разные. Список групп закрыт решением владельца 9 августа — по нему считается объём. Разбор — UI_V4_FINDINGS_HISTORY.md#strength-catalog-filter-groups-differ-from-product.",
+      "h": "58c4473c36ce"
     },
     "выход с экрана создания связки": {
       "v": "≠",
-      "f": "Укладка сведена 13 сентября: .sb-catalog-screen .sb-chips переведён с flex-wrap:wrap на nowrap + overflow-x:auto без полосы прокрутки, чипы не сжимаются. Расходится состав чипов: строка называет четырнадцать групп, которых в продукте нет (Ноги, Шея, Голень, Разгибатели) вместо четырёх, которые есть (Поясница, Квадрицепс, Бицепс бедра, Приводящие), и внутри себя держит «Икры» и «Голень» как разные. Список групп закрыт решением владельца 9 августа — по нему считается объём. Разбор — UI_V4_FINDINGS.md#strength-catalog-filter-groups-differ-from-product.",
+      "f": "Укладка сведена 13 сентября: .sb-catalog-screen .sb-chips переведён с flex-wrap:wrap на nowrap + overflow-x:auto без полосы прокрутки, чипы не сжимаются. Расходится состав чипов: строка называет четырнадцать групп, которых в продукте нет (Ноги, Шея, Голень, Разгибатели) вместо четырёх, которые есть (Поясница, Квадрицепс, Бицепс бедра, Приводящие), и внутри себя держит «Икры» и «Голень» как разные. Список групп закрыт решением владельца 9 августа — по нему считается объём. Разбор — UI_V4_FINDINGS_HISTORY.md#strength-catalog-filter-groups-differ-from-product.",
       "h": "5f7e53d0a98d",
       "reasonCode": "owner-decision",
-      "decisionRef": "docs/ui/UI_V4_FINDINGS.md#strength-catalog-filter-groups-differ-from-product"
+      "decisionRef": "docs/ui/UI_V4_FINDINGS_HISTORY.md#strength-catalog-filter-groups-differ-from-product"
     },
     "Программа пройдена · 25": {
       "v": "?",

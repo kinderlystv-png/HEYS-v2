@@ -2372,9 +2372,9 @@
       "h": "2c2ec98a753e"
     },
     "Действие · копировать · 27": {
-      "v": "=",
-      "f": "Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css и apps/web/__tests__/food-meal-transfer-v4.test.js; representative runtime capture 375×812 прошёл.",
-      "h": "5960a2613d5b"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css и apps/web/__tests__/food-meal-transfer-v4.test.js; representative runtime capture 375×812 прошёл.",
+      "h": "0121cbfea9ce"
     },
     "Действие · копировать · 28": {
       "v": "=",
@@ -2504,9 +2504,9 @@
       "h": "2c2ec98a753e"
     },
     "Действие · копировать без целей · 25": {
-      "v": "=",
-      "f": "Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css, apps/web/__tests__/copy-meal-empty-target-v4.test.js и food-meal-transfer-v4.test.js; четыре palette captures 375×812 прошли.",
-      "h": "5960a2613d5b"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сверено по apps/web/heys_day_copy_meal_modal_v1.js, apps/web/styles/modules/610-aps-meal-flow.css, apps/web/__tests__/copy-meal-empty-target-v4.test.js и food-meal-transfer-v4.test.js; четыре palette captures 375×812 прошли.",
+      "h": "0121cbfea9ce"
     },
     "Действие · копировать без целей · 26": {
       "v": "=",
@@ -2586,9 +2586,9 @@
       "h": "2c2ec98a753e"
     },
     "Действие · перенести · 15": {
-      "v": "=",
-      "f": "Сверено по apps/web/heys_move_modal_v1.js, apps/web/day/_meals.js, apps/web/styles/modules/610-aps-meal-flow.css и apps/web/__tests__/food-meal-transfer-v4.test.js; representative runtime capture 375×812 прошёл.",
-      "h": "5960a2613d5b"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Сверено по apps/web/heys_move_modal_v1.js, apps/web/day/_meals.js, apps/web/styles/modules/610-aps-meal-flow.css и apps/web/__tests__/food-meal-transfer-v4.test.js; representative runtime capture 375×812 прошёл.",
+      "h": "0121cbfea9ce"
     },
     "Действие · перенести · 16": {
       "v": "=",
