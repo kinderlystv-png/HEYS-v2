@@ -267,9 +267,13 @@ describe('чек-ин v4: геометрия по контракту канва�
     expect(pill.minHeight).toBe('44px');
   });
 
-  it('вид шага: содержимое 16/18/0, у шага веса 14 сверху', () => {
-    // Контракт «вид шага». Кадры мастера рисуют разброс 14–34 px — контракт
-    // старше кадра, разброс снят.
+  it('вид шага: содержимое 16/18/0 у всех шагов без исключений', () => {
+    // Верх шага — одно число 16, строка «верхний отступ шага — одно число»
+    // (13 сентября): «во всех кадрах зоны без исключений». Она отменяет разброс
+    // 14/16/18/22/24/34, который стоял в девяти кадрах одного шага. Хвост
+    // «у шага веса 14 сверху» в соседней строке «вид шага» дизайнер не вычистил
+    // — это остаток прежней редакции, разобрано в
+    // UI_V4_FINDINGS.md#checkin-step-top-padding-two-rows.
     document.body.innerHTML = `
       <div class="mc-modal mc-modal--daily">
         <div class="mc-step-content" id="weight"><div class="mc-weight-step"></div></div>
@@ -278,7 +282,7 @@ describe('чек-ин v4: геометрия по контракту канва�
       </div>`;
 
     const weight = getComputedStyle(document.getElementById('weight'));
-    expect(weight.paddingTop).toBe('14px');
+    expect(weight.paddingTop).toBe('16px');
     expect(weight.paddingLeft).toBe('18px');
     expect(weight.paddingBottom).toBe('0px');
 

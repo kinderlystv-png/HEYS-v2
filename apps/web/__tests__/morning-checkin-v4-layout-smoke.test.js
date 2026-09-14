@@ -100,13 +100,18 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toMatch(/CombinedSleepStepComponent[\s\S]*className: 'mc-scale-value'[\s\S]*React\.createElement\('b'/);
     expect(DAILY_CSS).toContain('.mc-modal--daily .mc-sleep-combined .mc-wheel-value--current');
     // Раньше верх шага держало общее правило со списком из пяти :has(...) и
-    // padding-top 24px. Контракт «вид шага» даёт 16 сверху всем и 14 шагу веса,
-    // поэтому общий верх задаёт .mc-step-content, а исключение осталось одно.
+    // padding-top 24px, потом осталось одно исключение — шаг веса на 14.
+    // Исключений больше нет: строка «верхний отступ шага — одно число»
+    // (13 сентября) говорит «шестнадцать во всех кадрах зоны без исключений» и
+    // отменяет разброс 14/16/18/22/24/34, стоявший в девяти кадрах одного шага.
+    // Хвост «у шага веса 14 сверху» остался в соседней строке «вид шага» —
+    // остаток прежней редакции, разобрано в
+    // UI_V4_FINDINGS.md#checkin-step-top-padding-two-rows.
     expect(DAILY_CSS).toMatch(
       /\.mc-modal--daily \.mc-step-content \{[\s\S]*?padding: 16px 18px 0;/
     );
-    expect(DAILY_CSS).toMatch(
-      /\.mc-modal--daily \.mc-step-content:has\(\.mc-weight-step\) \{\s*padding-top: 14px;/
+    expect(DAILY_CSS).not.toMatch(
+      /\.mc-modal--daily \.mc-step-content:has\(\.mc-weight-step\)[^{]*\{[^}]*padding-top/
     );
     // Заголовок не должен прыгать между шагами: своего верха ни у одного из
     // остальных шагов мастера больше нет.
@@ -197,7 +202,11 @@ describe('morning check-in v4 layout vs canvas', () => {
     expect(STEPS_SRC).toContain('mc-rest-clear-mark');
     expect(STEPS_SRC).toContain('mc-rest-measure-row');
     expect(STEPS_SRC).toContain('Не сейчас');
-    expect(STEPS_SRC).toContain('Пропустите — напомним через неделю.');
+    // Точка в конце снята вместе с переездом сноски в подвал блока: строка
+    // «подвал блока замеров» (13 сентября) даёт две сноски одним подвалом,
+    // и точка стояла только потому, что сноска была одна и висела на кнопке.
+    expect(STEPS_SRC).toContain('Пропустите — напомним через неделю');
+    expect(STEPS_SRC).toContain('Мерьте одну сторону — какую удобнее — и держитесь её');
     expect(STEPS_SRC).toContain('openMeasurementsLayer');
     expect(STEPS_SRC).toContain('setColdClock');
     expect(STEPS_SRC).toMatch(/applyHeaderBack:[\s\S]*?next\.supplementsLayer === 'dose'[\s\S]*?next\.supplementsLayer === 'add'/);

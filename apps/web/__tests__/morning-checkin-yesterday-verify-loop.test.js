@@ -4,7 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const YV_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_yesterday_verify_v1.js'), 'utf8');
 const MORNING_SRC = fs.readFileSync(path.resolve(__dirname, '../heys_morning_checkin_v1.js'), 'utf8');
@@ -45,6 +45,18 @@ describe('yesterdayVerify: шаг не оставляет непроверенн
   beforeEach(() => {
     localStorage.clear();
     window.HEYS = baseHeys();
+    // Часы морозим на тот же день, что подставлен в todayISO. Метка решения
+    // пишется временем Date.now(), а «день текущего чек-ина» читается из
+    // todayISO: пока часы шли настоящие, назавтра после написания теста они
+    // расходились, решение считалось принятым в прошлом чек-ине и день снова
+    // становился непроверенным. Подменять один источник времени из двух —
+    // и есть та ошибка, которую тест ловил у продукта.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${TODAY}T09:00:00`));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('«очистить» на дне, где еда всё же есть, всё равно закрывает разбор', () => {
