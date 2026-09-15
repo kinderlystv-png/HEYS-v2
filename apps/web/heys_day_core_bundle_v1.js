@@ -3681,8 +3681,16 @@
                     next = { ...next, z };
                 } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
                     // Зоны человек не называл — делим по типу работы единым
-                    // правилом, тем же, что у мастера.
-                    next = { ...next, z: splitZoneMinutesByType(wl.totalDurationMinutes, 'strength') };
+                    // правилом, тем же, что у мастера. Пометка ставится здесь,
+                    // в момент подстановки: потом отличить подставленное от
+                    // названного по самим числам нельзя, а экран обязан сказать,
+                    // что распределение — оценка (строка «минуты по зонам — как
+                    // показаны»). Снимает её тот, кто задаёт зоны сам.
+                    next = {
+                        ...next,
+                        z: splitZoneMinutesByType(wl.totalDurationMinutes, 'strength'),
+                        zonesEstimated: true,
+                    };
                 }
             }
             return next;

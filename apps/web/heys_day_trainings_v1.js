@@ -4407,7 +4407,16 @@
               React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
               hasValue && React.createElement('span', { className: 'zone-kcal' }, kcalZ(zi))
             );
-          })
+          }),
+          // Подставленное распределение помечено — та же пометка и по тому же
+          // правилу, что у оценённых шагов (строка «минуты по зонам — как
+          // показаны»). Названные человеком зоны подписи не получают, и
+          // пометка снимается в том же ряду, как только он задал их сам:
+          // отдельного экрана для этого не заводим.
+          T.zonesEstimated && React.createElement('span', {
+            key: 'zones-estimated',
+            className: 'compact-train-zones-estimated'
+          }, 'зоны оценены по типу тренировки')
         );
 
         const showBuilderCta = !isBuilder && canOfferWorkoutBuilderOnCard(T);

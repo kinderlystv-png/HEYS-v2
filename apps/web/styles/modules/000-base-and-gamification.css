@@ -3828,11 +3828,21 @@ color: var(--v4-sand-ink-slate, #1f2937);
 /* Inline zones row — одна линия на любой ширине; подпись зоны сжимается при нехватке места */
 .compact-train-zones-inline {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 4px;
   width: 100%;
   min-width: 0;
   margin-bottom: 8px;
+}
+
+/* Пометка подставленного распределения: «зоны оценены по типу тренировки»,
+   10,5 px тоном чернил 45 % (строка «минуты по зонам — как показаны»). Стоит в
+   том же ряду и занимает его целиком — перенос у ряда включён ради неё одной,
+   сами чипы зон по-прежнему не переносятся: их всегда четыре и они влезают. */
+.compact-train-zones-estimated {
+  flex: 1 0 100%;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font: 500 10.5px/1.3 Manrope, system-ui, sans-serif;
 }
 
 .compact-zone-inline {
