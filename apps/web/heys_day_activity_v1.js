@@ -198,9 +198,16 @@
   function formatStrengthEstimate(estimate) {
     if (!estimate || !(estimate.approaches > 0)) return '';
     const kg = Math.round(Number(estimate.liftedKg) || 0);
+    // Идущая сессия считается по ОТМЕЧЕННЫМ подходам, и подпись говорит это
+    // словом: иначе «оценка по 10 подходам» посреди тренировки из четырнадцати
+    // читается как «всё, что ты сделал», а сделано будет больше.
+    const podhod = podhodDative(estimate.approaches);
+    const counted = estimate.marked
+      ? (podhod === 'подходу' ? 'отмеченному подходу' : 'отмеченным подходам')
+      : podhod;
     // Разряд тысяч — тот же, что во всём продукте: неразрывный пробел от
     // локали, а не свой пробел руками.
-    return 'оценка по ' + estimate.approaches + ' ' + podhodDative(estimate.approaches)
+    return 'оценка по ' + estimate.approaches + ' ' + counted
       + ' · ' + kg.toLocaleString('ru-RU') + ' кг тоннажа';
   }
 
@@ -265,7 +272,17 @@
         value: round(runningKcal) + ' ккал',
         sub: 'силовая идёт · ' + runningAgg.doneApproaches + ' из ' + runningAgg.totalApproaches + ' подходов',
         strong: true,
-        running: true
+        running: true,
+        // Подпись есть во всех четырёх кадрах с расходом, идущая сессия не
+        // исключение: число там такое же непроверяемое. Считается по
+        // отмеченным — те же подходы, из которых сложился и сам расход.
+        estimate: runningAgg.doneApproaches > 0
+          ? {
+            approaches: runningAgg.doneApproaches,
+            liftedKg: Math.round(Number(runningAgg.totalVolume) || 0),
+            marked: true
+          }
+          : null
       };
     }
 
@@ -908,6 +925,33 @@
     const householdHasData = totalHouseholdMin > 0;
     const chargeHasData = (chargeDone || chargePlanned) && chargeRowValue !== 'не отмечено';
 
+    // Оценка без объяснения читается как измерение, поэтому число расхода не
+    // остаётся голым (строка «расход силовой — как показан»). Строка своя, а
+    // не подпись строки «Тренировки»: у той тап уже занят раскрытием состава,
+    // и два действия в одной строке спорили бы за палец. Стоит она ВНУТРИ
+    // карточки, сразу под своим рядом, — как в кадрах «Актив · день собран» и
+    // «Актив · разбор цели»; снаружи карточки подпись отрывалась от числа.
+    const estimateBlock = trainingsRow.estimate && React.createElement('div',
+      { key: 'estimate', className: 'activity-v4-estimate' },
+      React.createElement('button', {
+        type: 'button',
+        className: 'activity-v4-estimate__line',
+        'aria-expanded': estimateOpen,
+        onClick: () => setEstimateOpen((v) => !v)
+      },
+        React.createElement('span', null, formatStrengthEstimate(trainingsRow.estimate)),
+        // Приглашение справа: без него строка не выглядит раскрывающейся, и
+        // объяснение остаётся тем, чего никто не откроет.
+        React.createElement('span', { className: 'activity-v4-estimate__why-link' }, 'почему ›')
+      ),
+      estimateOpen && React.createElement('div', { className: 'activity-v4-estimate__why' },
+        STRENGTH_ESTIMATE_WHY.map((line, index) => React.createElement('p', {
+          key: 'why-' + index,
+          className: 'activity-v4-estimate__why-line'
+        }, line))
+      )
+    );
+
     const todayRows = [
       todayRow('trainings', 'Тренировки', trainingsRow.value, {
         sub: trainingsRow.sub,
@@ -918,6 +962,7 @@
         onClick: regularTrainingsBlock ? () => setCardioOpen((v) => !v) : undefined,
         expanded: regularTrainingsBlock ? cardioOpen : undefined
       }),
+      estimateBlock,
       todayRow('household', 'Бытовая активность',
         householdHasData ? (totalHouseholdMin + ' мин · ' + (householdK || 0) + ' ккал') : 'не отмечено', {
           muted: !householdHasData,
@@ -1255,26 +1300,6 @@
       ),
 
       React.createElement('div', { className: 'activity-v4-today' }, todayRows),
-
-      // Оценка без объяснения читается как измерение, поэтому число расхода не
-      // остаётся голым (строка «расход силовой — как показан»). Строка своя, а
-      // не подпись строки «Тренировки»: у той тап уже занят раскрытием состава,
-      // и два действия в одной строке спорили бы за палец.
-      trainingsRow.estimate && React.createElement('div',
-        { className: 'activity-v4-estimate' },
-        React.createElement('button', {
-          type: 'button',
-          className: 'activity-v4-estimate__line',
-          'aria-expanded': estimateOpen,
-          onClick: () => setEstimateOpen((v) => !v)
-        }, formatStrengthEstimate(trainingsRow.estimate)),
-        estimateOpen && React.createElement('div', { className: 'activity-v4-estimate__why' },
-          STRENGTH_ESTIMATE_WHY.map((line, index) => React.createElement('p', {
-            key: 'why-' + index,
-            className: 'activity-v4-estimate__why-line'
-          }, line))
-        )
-      ),
 
       // Аккордеон остался только внутри тренировок — для карточек с журналом
       // подходов (контракт строка 6). Раскрывается тапом по строке выше.
