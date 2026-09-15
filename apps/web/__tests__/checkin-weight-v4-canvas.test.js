@@ -262,10 +262,16 @@ describe('чек-ин · ряд ответов «Последний кофе»',
     expect(answered).not.toContain('тапом по «своё время»');
   });
 
-  it('пилюли ряда делят ширину поровну — строки разбора «· 17» и «· 18»', () => {
-    const rule = requireRule(PWA_CSS, '.mc-rest-coffee-actions .mc-pill').body;
-    expect(rule).toContain('flex: 1');
-    expect(rule).toContain('min-width: 64px');
+  it('ряд пилюль — сетка два на два, а не флекс с переносом', () => {
+    // Строка кадра «Чек-ин · сон · 33»: колонки 1fr 1fr, зазор 7. В один ряд
+    // четыре пилюли на 375 не помещались ни при каких полях — это и было
+    // настоящей причиной спора о полях карточки, закрытого 13 сентября.
+    // Прежние правила ряда в «Остальном» сняты вместе с переездом карточки:
+    // проверка держит и это, иначе мёртвое правило переживёт свой экран.
+    const rule = requireRule(PWA_CSS, '.mc-sleep-coffee-actions').body;
+    expect(rule).toContain('grid-template-columns: 1fr 1fr');
+    expect(rule).toContain('gap: 7px');
+    expect(PWA_CSS).not.toContain('.mc-rest-coffee-actions');
   });
 });
 

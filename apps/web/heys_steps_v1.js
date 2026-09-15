@@ -2945,11 +2945,10 @@
   // стоит последним блоком шага, после ряда «Легли / Встали». Кофе по смыслу
   // принадлежит прошедшей ночи, как и весь шаг; в «Остальном» она стояла среди
   // душа, добавок и рутины, где связи со сном не видно.
-  // Форма взята из строки кадра «Чек-ин · сон · 29» — радиус 16, фон --c1,
-  // поля 13/14. Названное правило «форма карточки кофе — общая шага» требует
-  // радиус 20 и поля 16/17; спор двух строк отдан дизайнеру записью
-  // checkin-coffee-card-padding-two-lines, до ответа держим строку кадра —
-  // с общими полями ряд пилюль не помещается в 375.
+  // Форма — общая карточка шага: радиус 20, фон --c1, поля 16/17. Спор трёх
+  // строк про поля дизайнер закрыл 13 сентября в пользу общей формы, а ряд
+  // пилюль перевёл в сетку 2×2: в один ряд четыре пилюли на 375 не помещались
+  // ни при каких полях, и это и было настоящей причиной спора.
   function renderYesterdayCoffeeCard(data, onChange) {
     const choice = data.coffeeChoice || null;
     const exactLabel = data.coffeeTime ? String(data.coffeeTime).slice(0, 5) : 'своё время';
@@ -2978,8 +2977,15 @@
           onClick: row.id === 'exact' ? openExact : () => pick(row.id)
         }, row.label))
       ),
+      // Слова заметки названы строкой «кофе спрашивается за вчера» дословно, и
+      // предложение про вчера в ней — не украшение: заголовок говорит «вчера», а
+      // причину знает только эта строка. Без неё человек утром отвечает про
+      // сегодняшний кофе, которого ещё не пил, и ответ становится намерением.
+      // ОТСТУПЛЕНИЕ от кадра, названное вслух: составная строка «Чек-ин · сон ·
+      // текст» этого предложения не содержит — кадр отстал от строки.
       React.createElement('div', { className: 'mc-sleep-coffee-why' },
-        `Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну. Точное время — тапом по «${exactLabel}».`
+        'Нужно для пункта «Готовность ко сну»: кофе позже восьми часов до отбоя мешает сну.'
+        + ` Спрашиваем про вчера — сегодняшний кофе ещё впереди. Точное время — тапом по «${exactLabel}».`
       )
     );
   }
@@ -7008,31 +7014,6 @@
       onChange({ ...data, coldTime: `${pad2(hours)}:${pad2(minutes)}` });
     };
 
-    // Последний кофе: четыре варианта, из них один со своим временем. Шаг
-    // проходится без ответа — тогда пункт кофеина в «Готовности ко сну»
-    // остаётся без данных и в счётчик не идёт (контракт «кофе не обязателен»).
-    const coffeeChoice = data.coffeeChoice || null;
-    const coffeeFocus = data.coffeeOpen === true;
-    const coffeeClock = parseColdTime(data.coffeeTime || nowTime());
-    const setCoffeeChoice = (choice) => {
-      onChange({ ...data, coffeeChoice: choice, coffeeOpen: false, coffeeTime: null });
-    };
-    const openCoffeeLayer = () => {
-      onChange({
-        ...data,
-        coffeeChoice: 'exact',
-        coffeeTime: data.coffeeTime || nowTime(),
-        coffeeOpen: true,
-        coldOpen: false,
-        measurementsOpen: false
-      });
-    };
-    const setCoffeeClock = (hours, minutes) => {
-      onChange({ ...data, coffeeTime: `${pad2(hours)}:${pad2(minutes)}` });
-    };
-    const clearCoffeeMark = () => {
-      onChange({ ...data, coffeeChoice: null, coffeeTime: null, coffeeOpen: false });
-    };
     const TimePicker = HEYS.StepModal?.TimePicker;
 
     const lastMeasurements = (HEYS.Steps && typeof HEYS.Steps.getLastMeasurements === 'function')
@@ -7208,40 +7189,6 @@
             'Мерьте одну сторону — какую удобнее — и держитесь её: сравнивать имеет смысл только с собой'
           )
         )
-      );
-    }
-
-    if (coffeeFocus) {
-      return React.createElement('div', { className: 'mc-rest-step mc-rest-step--layer' },
-        React.createElement('div', { className: 'mc-rest-cold' },
-          React.createElement('div', { className: 'mc-rest-cold-head' },
-            React.createElement('div', { className: 'mc-rest-cold-title' }, 'Последний кофе'),
-            React.createElement('div', { className: 'mc-rest-coffee-note' }, 'до отбоя 8 ч')
-          ),
-          React.createElement('div', { className: 'mc-rest-cold-hint' },
-            'Во сколько была последняя чашка — считаем от неё до отбоя.'
-          ),
-          React.createElement('div', { className: 'mc-rest-cold-time' },
-            React.createElement('div', { className: 'mc-sleep-label mc-rest-cold-when-label' }, 'Когда'),
-            TimePicker && React.createElement(TimePicker, {
-              hours: coffeeClock.hours,
-              minutes: coffeeClock.minutes,
-              onHoursChange: (hours) => setCoffeeClock(hours, coffeeClock.minutes),
-              onMinutesChange: (minutes) => setCoffeeClock(coffeeClock.hours, minutes),
-              onTimeChange: setCoffeeClock,
-              hoursLabel: '',
-              minutesLabel: '',
-              display: null,
-              linkedScroll: true,
-              compact: true,
-              className: 'mc-rest-cold-clock'
-            })
-          )
-        ),
-        renderClearMark(clearCoffeeMark),
-        React.createElement('div', {
-          className: 'mc-recorded-hint mc-rest-clear-mark-hint'
-        }, 'Кофе можно не отмечать — тогда пункт «Готовность ко сну» просто останется без данных.')
       );
     }
 
