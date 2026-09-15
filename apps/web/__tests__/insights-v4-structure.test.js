@@ -138,6 +138,18 @@ describe('Insights tab v4 structure', () => {
 
 // Экраны «Подробно» (пакет 2026-08-29): фенотип пятью осями и таблица
 // порогов с двумя числами. Оба только читают — ни кнопок, ни правки.
+// Конец среза «Подробно» собирается из кусков: перевод строки внутри литерала
+// ломает разбор файла, а экранированный — читается как два символа.
+const DETAIL_END = 'if (useInsightsV4) {' + String.fromCharCode(10) + '        return h(InsightsErrorBoundary';
+
+/** Срез самого экрана «Подробно» — без экранов, стоящих за его входами. */
+function detailScreenSourceFor(source) {
+  return source.slice(
+    source.indexOf('if (useInsightsV4 && showInsightsDetail)'),
+    source.indexOf(DETAIL_END),
+  );
+}
+
 describe('экраны «Подробно»: фенотип и пороги', () => {
   it('фенотип: пять осей, ярус следствий, честная незаполненная ось', () => {
     expect(dashboardSource).toContain('PHENOTYPE_AXES');
@@ -234,7 +246,50 @@ describe('экраны «Подробно»: фенотип и пороги', ()
     );
     expect(detail).not.toContain('PhenotypeExpandableCard');
     expect(detail).not.toContain('DataCompletenessCard');
-    expect(detail).toContain('InsightsV4Phenotype');
-    expect(detail).toContain('InsightsV4Thresholds');
+  });
+
+  // Строка контракта «ярус „Метаболизм“ — входы, не карточки»: ярус рисует две
+  // строки-входа, а числа живут ЗА ними, на своих экранах. Иначе второй слой
+  // становится третьим первым экраном.
+  it('ярус «Метаболизм» — две строки-входа, а не карточки с числами', () => {
+    const detail = detailScreenSourceFor(dashboardSource);
+    expect(detail).toContain("setMetabolismScreen('phenotype')");
+    expect(detail).toContain("setMetabolismScreen('analytics')");
+    // Пороги — тоже вход: строка «вид · экран „Подробно“» ставит «Метаболизм» и
+    // «Персональные пороги» строками-входами, а не содержимым.
+    expect(detail).toContain("setMetabolismScreen('thresholds')");
+    expect(detail).not.toContain('InsightsV4Thresholds');
+    expect(detail).toContain('Метаболический фенотип');
+    expect(detail).toContain('Продвинутая аналитика');
+    // Ни фенотипа, ни четырёх карточек в самом «Подробно» больше нет.
+    expect(detail).not.toContain('InsightsV4Phenotype');
+    expect(detail).not.toContain('MetabolismSection');
+    // И раскрывашки тоже: вход ведёт на экран, а не разворачивает блок.
+    expect(detail).not.toContain('CollapsibleSection');
+  });
+
+  it('за входами стоят свои экраны, каждый с возвратом в «Подробно»', () => {
+    const screens = dashboardSource.slice(
+      dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail && metabolismScreen)'),
+      dashboardSource.indexOf('if (useInsightsV4 && showInsightsDetail)'),
+    );
+    expect(screens).toContain('InsightsV4Phenotype');
+    expect(screens).toContain('MetabolismSection');
+    expect(screens).toContain('← Подробно');
+    // Подписи экранов из кадров: на чём построено то, что человек видит.
+    expect(screens).toContain('InsightsV4Thresholds');
+    expect(screens).toContain('правило · 30 дней');
+    expect(screens).toContain('по вашим дням');
+    expect(screens).toContain('правило · 14 дней');
+    // Имя экрана порогов — «Пороги расчёта» по строке «имя экрана»; вход в
+    // «Подробно» зовётся иначе, и это контракт, а не опечатка.
+    expect(screens).toContain('Пороги расчёта');
+  });
+
+  it('вход в фенотип называет срок готовности, а не ведёт в пустой экран', () => {
+    const detail = detailScreenSourceFor(dashboardSource);
+    // Фенотип считается строго на 30 днях — до порога вход говорит «через N».
+    expect(detail).toContain('historyDaysWithData >= 30');
+    expect(detail).toContain("'через ' + Math.max(1, 30 - historyDaysWithData)");
   });
 });

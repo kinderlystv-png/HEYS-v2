@@ -3230,6 +3230,11 @@
       const [priorityActions, setPriorityActions] = useState([]);
       const [insightsPeriod, setInsightsPeriod] = useState(7);
       const [showInsightsDetail, setShowInsightsDetail] = useState(false);
+      // Экран за входом яруса «Метаболизм»: null — сам «Подробно», иначе имя
+      // экрана. Строка контракта «ярус „Метаболизм“ — входы, не карточки»:
+      // числа живут ЗА входами, а ярус рисует только строки-входы, иначе
+      // второй слой становится третьим первым экраном.
+      const [metabolismScreen, setMetabolismScreen] = useState(null);
       const [debtSheetOpen, setDebtSheetOpen] = useState(false); // лист «Как считается долг»
       const [ewsPanelOpen, setEwsPanelOpen] = useState(false);
       // Какой блок открыл панель: «Стоит внимания» или «Что заметили».
@@ -3708,6 +3713,74 @@
       const insightsDaysWithData = realInsights?.daysWithData ?? realInsights?.daysAnalyzed ?? daysWithData ?? 0;
       const curatorPhrase = buildInsightsCuratorPhrase(priorityActions, ewsWarnings);
 
+      // Экраны за входами яруса «Метаболизм». Каждый — свой экран с возвратом в
+      // «Подробно», а не раскрывашка внутри него: строка контракта «ярус
+      // „Метаболизм“ — входы, не карточки» ставит числа ЗА входом именно
+      // затем, чтобы второй слой не стал третьим первым экраном.
+      if (useInsightsV4 && showInsightsDetail && metabolismScreen) {
+        const screens = {
+          phenotype: {
+            title: 'Метаболизм',
+            note: 'правило · 30 дней',
+            body: h(InsightsV4Phenotype, {
+              lsGet,
+              profile: effectiveData.profile,
+              historyDays: historyDaysWithData
+            })
+          },
+          analytics: {
+            title: 'Продвинутая аналитика',
+            note: 'по вашим дням',
+            body: h(MetabolismSection, {
+              lsGet,
+              profile: effectiveData.profile,
+              pIndex: effectiveData.pIndex,
+              selectedDate
+            })
+          },
+          // Имя экрана — «Пороги расчёта» по строке «имя экрана», а не
+          // «Персональные пороги»: так он назван в кадре. Вход в «Подробно»
+          // при этом зовётся «Персональные пороги» — это разные имена, и
+          // разница названа контрактом, а не опечатка.
+          thresholds: {
+            title: 'Пороги расчёта',
+            note: 'правило · 14 дней',
+            body: h(React.Fragment, null,
+              h(InsightsV4Thresholds, {
+                lsGet,
+                profile: effectiveData.profile,
+                pIndex: effectiveData.pIndex,
+                historyDays: historyDaysWithData
+              }),
+              // Контракт «карточка · „Где они работают“»: замыкающая проза без
+              // строк и чисел. Без неё пороги читаются настройкой, которую
+              // человек должен подкрутить.
+              h('div', { className: 'insights-v4-where' },
+                'Пороги — не настройка: по ним считаются оценка дня, паттерны и '
+                + 'предупреждения. Меняются они сами, раз в неделю, по вашим же '
+                + 'данным — трогать их не нужно.')
+            )
+          }
+        };
+        const screen = screens[metabolismScreen] || screens.phenotype;
+        return h(InsightsErrorBoundary, null,
+          h('div', { className: 'insights-tab insights-v4 insights-v4--detail' },
+            h('div', { className: 'insights-v4-detail__head' },
+              h('button', {
+                type: 'button',
+                className: 'insights-v4-detail__back',
+                onClick: function () { setMetabolismScreen(null); }
+              }, '← Подробно'),
+              h('h2', { className: 'insights-v4-detail__title' }, screen.title),
+              h('span', { className: 'insights-v4-detail__note' }, screen.note)
+            ),
+            h('div', { className: 'insights-tab__content insights-v4__content insights-v4-detail__content' },
+              screen.body
+            )
+          )
+        );
+      }
+
       if (useInsightsV4 && showInsightsDetail) {
         return h(InsightsErrorBoundary, null,
           h('div', { className: 'insights-tab insights-v4 insights-v4--detail' },
@@ -3728,41 +3801,38 @@
                   'Расчёт при условии точного учёта — не обещание даты на весах.'
                 )
               ),
-              h(CollapsibleSection, {
-                // Кадр «Инсайты · подробно», элемент 11: ярус называется
-                // «Метаболизм». Хвост «и тип» повторял то, что стоит строкой
-                // ниже — «Метаболический фенотип».
-                title: 'Метаболизм',
-                // Значка нет: в v4 их нет ни на одном ярусе зоны — так же
-                // сегодня разобраны карточка каскада, предупреждения и
-                // «Что если». Заголовок секции называет её сам.
-                defaultOpen: false,
-                priority: 'HIGH'
-              },
-                h(MetabolismSection, {
-                  lsGet,
-                  profile: effectiveData.profile,
-                  pIndex: effectiveData.pIndex,
-                  selectedDate
-                }),
-                // Контракт «состав фенотипа» и «оба экрана только читают»:
-                // пять осей и что из них следует; ни кнопок, ни правки.
-                h(InsightsV4Phenotype, {
-                  lsGet,
-                  profile: effectiveData.profile,
-                  historyDays: historyDaysWithData
-                }),
-                // Карточка расширенной аналитики со второго слоя снята.
-                // Кадр «Инсайты · подробно» её не рисует, а содержание её —
-                // отчёт модели о себе: байесовская уверенность, MAPE, точность
-                // предсказаний, объём данных, «Высокая точность предсказаний!».
-                // Строка «слова блока наблюдений» (58-я сборка) прямо
-                // запрещает такое на экране: это не текст, а дамп расчёта, и
-                // человек не может ни проверить его собой, ни что-то с ним
-                // сделать. Второй слой отвечает «на чём это основано», а не
-                // «как устроен наш расчёт». Сам компонент жив и открывается из
-                // отладки — снята только его выдача человеку.
+              // Ярус «Метаболизм» — ДВА ВХОДА, а не карточки с числами
+              // (кадр «Инсайты · подробно», строки 11–16). Числа живут за
+              // входами, на своих экранах: иначе второй слой становится
+              // третьим первым экраном. Раскрывашки здесь тоже нет — вход
+              // ведёт на экран, а не разворачивает блок.
+              h('div', { className: 'insights-v4-tier' }, 'Метаболизм'),
+              h('div', { className: 'insights-v4-metab-entries' },
+                h('button', {
+                  type: 'button',
+                  className: 'insights-v4-metab-entry',
+                  onClick: function () { setMetabolismScreen('phenotype'); }
+                },
+                  h('span', { className: 'insights-v4-metab-entry__name' }, 'Метаболический фенотип'),
+                  // Оговорка готовности стоит в самой строке входа: фенотип
+                  // считается строго на 30 днях, и вход, ведущий в пустой
+                  // экран, обещал бы то, чего там нет.
+                  historyDaysWithData >= 30
+                    ? h('span', { className: 'insights-v4-metab-entry__chevron', 'aria-hidden': 'true' }, '›')
+                    : h('span', { className: 'insights-v4-metab-entry__wait' },
+                      'через ' + Math.max(1, 30 - historyDaysWithData) + ' '
+                      + pluralDaysWord(Math.max(1, 30 - historyDaysWithData)))
+                ),
+                h('button', {
+                  type: 'button',
+                  className: 'insights-v4-metab-entry',
+                  onClick: function () { setMetabolismScreen('analytics'); }
+                },
+                  h('span', { className: 'insights-v4-metab-entry__name' }, 'Продвинутая аналитика'),
+                  h('span', { className: 'insights-v4-metab-entry__chevron', 'aria-hidden': 'true' }, '›')
+                )
               ),
+
               // Контракт «второй слой»: итоги короткие и без периодов —
               // длинные сравнения остаются в Отчётах.
               periodOutcomes && (periodOutcomes.week != null || periodOutcomes.month != null) && h('div', { className: 'insights-v4-outcomes' },
@@ -3800,15 +3870,24 @@
                   : h('p', { className: 'insights-v4-whatif__locked' },
                     'Откроется через ' + Math.max(1, 14 - historyDaysWithData) + ' ' + pluralDaysWord(Math.max(1, 14 - historyDaysWithData)) + ' — сценарий на коротких данных был бы гаданием.')
               ),
-              // Контракт «состав порогов» + «оба экрана только читают»:
-              // восемь строк с личным и общим числом; повторного счётчика
-              // полноты нет — счётчик один и живёт в шапке.
-              h(InsightsV4Thresholds, {
-                lsGet,
-                profile: effectiveData.profile,
-                pIndex: effectiveData.pIndex,
-                historyDays: historyDaysWithData
-              }),
+              // Строка контракта «вид · экран „Подробно“»: «Метаболизм» и
+              // «Персональные пороги» стоят СТРОКАМИ-ВХОДАМИ. Содержимое
+              // порогов — три яруса по источнику числа — живёт за входом, на
+              // своём экране «Пороги расчёта».
+              h('div', { className: 'insights-v4-tier' }, 'Персональные пороги'),
+              h('div', { className: 'insights-v4-metab-entries' },
+                h('button', {
+                  type: 'button',
+                  className: 'insights-v4-metab-entry',
+                  onClick: function () { setMetabolismScreen('thresholds'); }
+                },
+                  h('span', { className: 'insights-v4-metab-entry__name' }, 'Пороги расчёта'),
+                  // Наблюдённые пороги считаются на 14 днях; до порога экран
+                  // открыт, но колонка «ваш» в нём пуста — это сказано там, а
+                  // не здесь: вход не обещает надёжности.
+                  h('span', { className: 'insights-v4-metab-entry__chevron', 'aria-hidden': 'true' }, '›')
+                )
+              ),
 
               // Контракт «карточка · „Что откроется дальше“» ставит лестницу
               // порогов и здесь, не только в заглушке новичка: человек,
@@ -3817,13 +3896,6 @@
               h('div', { className: 'insights-v4-tier' }, 'Что откроется дальше'),
               h(InsightsV4Ladder, { historyDays: historyDaysWithData }),
 
-              // Контракт «карточка · „Где они работают“»: замыкающая карточка
-              // экрана — проза без строк и чисел. Без неё пороги читаются
-              // настройкой, которую человек должен подкрутить.
-              h('div', { className: 'insights-v4-where' },
-                'Пороги — не настройка: по ним считаются оценка дня, паттерны и '
-                + 'предупреждения. Меняются они сами, раз в неделю, по вашим же '
-                + 'данным — трогать их не нужно.')
             )
           ),
           showPatternDebug && window.PatternDebugModal && h(window.PatternDebugModal, {

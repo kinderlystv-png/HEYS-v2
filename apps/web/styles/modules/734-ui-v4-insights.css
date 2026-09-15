@@ -1536,6 +1536,63 @@
 /* Число итога — то, ради чего строка существует, и контракт даёт ему вес
    числа: 12,5/700 тоном чернил, моноцифрами. Стояло 11,5 приглушённым — имя
    периода слева читалось громче собственного результата. */
+/* Ярус «Метаболизм» — две строки-входа (кадр «Инсайты · подробно», 12–16).
+   Список, а не карточки: за строкой стоит экран, и число ей не принадлежит.
+   Имя входа тоном --v4-ink-2 по строке 14: вход не кричит, он ведёт. */
+.insights-v4-metab-entries {
+  display: flex;
+  flex-direction: column;
+  background: var(--v4-card, #f7efe2);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.insights-v4-metab-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 13px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Разделитель между входами, у последнего его нет: строка 16 кадра прямо
+   говорит «разделитель none». */
+.insights-v4-metab-entry + .insights-v4-metab-entry {
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+}
+
+.insights-v4-metab-entry__name {
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
+/* Оговорка готовности: тем же тоном, что имя входа, — это не предупреждение,
+   а срок. Тревожный тон здесь читался бы как ошибка. */
+.insights-v4-metab-entry__wait {
+  font: 600 11.5px/1 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  white-space: nowrap;
+}
+
+.insights-v4-metab-entry__chevron {
+  font: 700 13px/1 Manrope, system-ui, sans-serif;
+  color: var(--v4-act-text, #8a4a20);
+}
+
+/* Подпись рядом с именем экрана за входом: «правило · 30 дней», «по вашим
+   дням» — говорит, на чём построено то, что человек сейчас увидит. */
+.insights-v4-detail__note {
+  margin-left: auto;
+  font: 600 11px/1 Manrope, system-ui, sans-serif;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+}
+
 .insights-v4-outcomes__value,
 .insights-v4-thresholds__value {
   font-size: 12.5px;
