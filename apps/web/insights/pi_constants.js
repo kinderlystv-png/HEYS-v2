@@ -2263,6 +2263,11 @@ window.__heysPerfMark && window.__heysPerfMark('postboot-2-insights: execute sta
     INSULIN_SENSITIVITY: 'insulin_sensitivity',
     GUT_HEALTH: 'gut_health',
 
+    // Строка контракта «кофе и сон — правило детектора» (73-я сборка):
+    // поздний кофе против раннего и «не пил», источник один — ответ утреннего
+    // чек-ина.
+    COFFEE_SLEEP: 'coffee_sleep',
+
     // NEW v4.0 (B1-B6)
     SLEEP_QUALITY: 'sleep_quality',         // B1: влияние качества сна на метрики следующего дня
     WELLBEING_CORRELATION: 'wellbeing_correlation', // B2: связь самочувствия с питанием/сном

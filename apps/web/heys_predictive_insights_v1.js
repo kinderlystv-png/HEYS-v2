@@ -615,6 +615,9 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   const analyzeGutHealth = getPatternAnalyzer('analyzeGutHealth', 'gut_health');
   const analyzeNEATTrend = getPatternAnalyzer('analyzeNEATTrend', 'neat_activity');
 
+  // Кофе и сон: строка «кофе и сон — правило детектора» (73-я сборка).
+  const analyzeCoffeeSleep = getPatternAnalyzer('analyzeCoffeeSleep', 'coffee_sleep');
+
   // NEW v4.0 (B1-B6)
   const analyzeSleepQuality = getPatternAnalyzer('analyzeSleepQuality', 'sleep_quality');
   const analyzeWellbeing = getPatternAnalyzer('analyzeWellbeing', 'wellbeing_correlation');
@@ -812,6 +815,10 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
       analyzeNutrientTiming(days, pIndex, profile),      // Тайминг нутриентов
       analyzeInsulinSensitivity(days, pIndex, profile),  // Чувствительность к инсулину
       analyzeGutHealth(days, pIndex),                    // Здоровье ЖКТ
+
+      // Кофе и сон: единственное место, где ответ утреннего чек-ина про кофе
+      // работает на вывод, а не на пункт чек-листа «Готовности ко сну».
+      analyzeCoffeeSleep(days),
 
       // === NEW v4.0 (B1-B6) ===
       analyzeSleepQuality(days, pIndex),                 // B1: качество сна → метрики след. дня

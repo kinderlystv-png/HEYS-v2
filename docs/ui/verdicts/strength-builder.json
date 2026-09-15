@@ -4109,7 +4109,7 @@
     "Типы подходов · честный тоннаж · 17": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: .sb-at-aps .sb-at-drop-tag { background:var(--sb-accbg); color:var(--sb-accTx) } — apps/web/styles/modules/750-strength-builder.css:5018-5026; apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js sand/blue #f6e6dd/#a1471c row 17.",
-      "h": "f6c56cf0b758"
+      "h": "ef604214f6a5"
     },
     "Типы подходов · честный тоннаж · 18": {
       "v": "=",
@@ -4249,7 +4249,7 @@
     "Дроп-сет · свой экран · 13": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: .sb-ds-drop-tag { background:var(--sb-accbg); color:var(--sb-accTx) } — apps/web/styles/modules/750-strength-builder.css:5134-5141; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js sand/blue #f6e6dd/#a1471c row 13.",
-      "h": "f6c56cf0b758"
+      "h": "ef604214f6a5"
     },
     "Дроп-сет · свой экран · 14": {
       "v": "=",
@@ -8376,14 +8376,14 @@
       "h": "b541193d7777"
     },
     "Типы подходов · честный тоннаж · текст": {
-      "v": "=",
-      "f": "Composite DOM: заголовок+ключ+2980+раскладка — apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js composite assert; apps/web/strength/heys_strength_superset_ui_v1.js:1134-1196.",
-      "h": "8d67ca465622"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: Composite DOM: заголовок+ключ+2980+раскладка — apps/web/__tests__/strength-builder-approach-types-v4-canvas-contract.test.js composite assert; apps/web/strength/heys_strength_superset_ui_v1.js:1134-1196.",
+      "h": "7a8dad6596a8"
     },
     "Дроп-сет · свой экран · текст 1/2": {
-      "v": "=",
-      "f": "7 правил + заголовки: DROP_SET_RULES map + volume copy — apps/web/strength/heys_strength_superset_ui_v1.js:1259-1274; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js rules===7.",
-      "h": "660a87191523"
+      "v": "?",
+      "f": "Дизайнер переписал строку, вердикт снят. Прежде: 7 правил + заголовки: DROP_SET_RULES map + volume copy — apps/web/strength/heys_strength_superset_ui_v1.js:1259-1274; apps/web/__tests__/strength-builder-drop-set-v4-canvas-contract.test.js rules===7.",
+      "h": "d2e97e858fd8"
     },
     "Дроп-сет · свой экран · текст 2/2": {
       "v": "=",
@@ -9982,7 +9982,7 @@
     "«дроп» и «сброс» — два слова с разными ролями": {
       "v": "?",
       "f": "Дизайнер переписал строку, вердикт снят. Прежде: Словарь сведён в главном: «дроп» — ярлык типа подхода в таблице, «сброс» — ступень и действие («+ Ещё сброс · вес автоматически ниже», «Подход N со сбросом», «+ Сброс»). Расходится один пункт: строка просит подписи ступеней «сброс 1», «сброс 2», а оба кадра дроп-сета того же пакета рисуют ярлык ступени словом «дроп» — «Дроп-сет · свой экран · 13» и составная строка А3. Продукт стоит по кадрам. Разбор — UI_V4_FINDINGS.md#strength-drop-stage-label-word-conflict.",
-      "h": "f8f1346b72c8"
+      "h": "b2f28ebae85a"
     },
     "счёт подходов в подписи упражнения": {
       "v": "?",

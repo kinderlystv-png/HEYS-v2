@@ -506,6 +506,24 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
   }
 
   /**
+   * Кофе и сон — правило детектора (73-я сборка). Источник один: ответ
+   * утреннего чек-ина.
+   * @param days
+   */
+  function analyzeCoffeeSleep(days) {
+    const patternModules = getPatternModules();
+    if (typeof patternModules.analyzeCoffeeSleep === 'function') {
+      return patternModules.analyzeCoffeeSleep(days);
+    }
+
+    return {
+      pattern: PATTERNS.COFFEE_SLEEP || 'coffee_sleep',
+      available: false,
+      reason: 'module_not_loaded'
+    };
+  }
+
+  /**
    * B2: Wellbeing Correlation — что влияет на самочувствие
    * @param days
    * @param pIndex
@@ -947,6 +965,7 @@ if (typeof window !== 'undefined') window.__heysLoadingHeartbeat = Date.now();
     analyzeInsulinSensitivity,
     analyzeGutHealth,
     analyzeNEATTrend,
+    analyzeCoffeeSleep,
     // v4.0 (B1-B6)
     analyzeSleepQuality,
     analyzeWellbeing,

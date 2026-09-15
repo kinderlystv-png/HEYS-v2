@@ -18,8 +18,22 @@
     const PATTERNS = piConst.PATTERNS || {
         SLEEP_WEIGHT: 'sleep_weight',
         SLEEP_HUNGER: 'sleep_hunger',
-        SLEEP_QUALITY: 'sleep_quality'
+        SLEEP_QUALITY: 'sleep_quality',
+        COFFEE_SLEEP: 'coffee_sleep'
     };
+
+    // ─── Кофе и сон ───────────────────────────────────────────────────────
+    // Строка контракта «кофе и сон — правило детектора» (73-я сборка), все
+    // числа — оттуда, ни одного своего.
+    //
+    // ИСТОЧНИК ОДИН: ответ утреннего чек-ина. Кофе, опознанный по названию
+    // продукта в приёмах, детектор не читает — у него нет честного времени
+    // (продукт можно внести вечером за утро), и два источника, не знающие друг
+    // о друге, дали бы разные ответы на один вопрос.
+    const COFFEE_LATE_AFTER_MIN = 14 * 60 + 30; // поздний кофе: позже 14:30
+    const COFFEE_MIN_DAYS = 14;                 // всего дней с ответом
+    const COFFEE_MIN_PER_GROUP = 5;             // и не меньше пяти в каждой
+    const COFFEE_SLEEP_DIFF_MIN = 25;           // разница, при которой называем
 
     const average = piStats.average || function (arr) {
         if (!Array.isArray(arr) || arr.length === 0) return 0;
@@ -613,8 +627,110 @@
         };
     }
 
+    /**
+     * Кофе и сон: поздний кофе против раннего и «не пил».
+     *
+     * Строка контракта «кофе и сон — правило детектора». Сравниваются дни, где
+     * кофе был позже 14:30, с днями «до 12:00» и «не пил»; дни со своим
+     * временем между 12:00 и 14:30 не попадают ни в одну группу — они не
+     * отвечают на вопрос «поздний или ранний».
+     *
+     * Минимум 14 дней с ответом и не меньше пяти в каждой группе: иначе
+     * сравнивать нечего. Разница, при которой паттерн называется, — 25 минут
+     * сна в среднем; меньше — «связь не выявлена», и это тоже ответ, который
+     * показывается.
+     *
+     * В карточку уходят только минуты и дни: ни p-value, ни доверительных
+     * интервалов — человек их собой не проверит.
+     */
+    function analyzeCoffeeSleep(days) {
+        const late = [];
+        const early = [];
+        const getMinutes = HEYS.Steps?.getLastCoffeeMinutes;
+
+        for (const day of (Array.isArray(days) ? days : [])) {
+            const hours = getDaySleepHours(day);
+            if (!(hours > 0)) continue;
+            // Разбор ответа живёт в шаге чек-ина — второго чтения поля нет.
+            const coffee = typeof getMinutes === 'function' ? getMinutes(day) : undefined;
+            if (coffee === undefined) continue;
+            if (coffee === null) early.push(hours);            // «не пил»
+            else if (coffee > COFFEE_LATE_AFTER_MIN) late.push(hours);
+            else if (coffee <= 12 * 60) early.push(hours);     // «до 12:00»
+        }
+
+        const answered = late.length + early.length;
+        if (answered < COFFEE_MIN_DAYS
+            || late.length < COFFEE_MIN_PER_GROUP
+            || early.length < COFFEE_MIN_PER_GROUP) {
+            return {
+                pattern: PATTERNS.COFFEE_SLEEP,
+                available: false,
+                reason: 'not_enough_coffee_days',
+                minDaysRequired: COFFEE_MIN_DAYS,
+                daysAnalyzed: answered,
+                lateDays: late.length,
+                earlyDays: early.length,
+                title: 'Кофе после 16:00 — сон короче',
+                insight: 'Кофе после 16:00 — сон короче: пока недостаточно данных'
+            };
+        }
+
+        const diffMin = Math.round((average(early) - average(late)) * 60);
+        if (diffMin < COFFEE_SLEEP_DIFF_MIN) {
+            // Пустая находка — тоже ответ, и она показывается: человек отвечал
+            // про кофе две недели и вправе узнать, что связи не видно.
+            return {
+                pattern: PATTERNS.COFFEE_SLEEP,
+                available: true,
+                confidence: 0.5,
+                daysAnalyzed: answered,
+                lateDays: late.length,
+                earlyDays: early.length,
+                diffMinutes: diffMin,
+                title: 'Кофе и сон: связь не выявлена',
+                insight: 'Кофе и сон: связь не выявлена — в дни с поздним кофе вы спите примерно столько же'
+            };
+        }
+
+        return {
+            pattern: PATTERNS.COFFEE_SLEEP,
+            available: true,
+            confidence: 0.8,
+            daysAnalyzed: answered,
+            lateDays: late.length,
+            earlyDays: early.length,
+            diffMinutes: diffMin,
+            title: 'Кофе после 16:00 — сон короче',
+            insight: 'Кофе после 16:00 — сон короче на ' + diffMin + ' '
+                + pluralMinutesWord(diffMin) + ': ' + late.length + ' таких '
+                + pluralDaysWord(late.length) + ' против ' + early.length
+        };
+    }
+
+    function pluralMinutesWord(n) {
+        const abs = Math.abs(Math.round(n));
+        const last = abs % 10;
+        const tens = abs % 100;
+        if (tens >= 11 && tens <= 14) return 'минут';
+        if (last === 1) return 'минуту';
+        if (last >= 2 && last <= 4) return 'минуты';
+        return 'минут';
+    }
+
+    function pluralDaysWord(n) {
+        const abs = Math.abs(Math.round(n));
+        const last = abs % 10;
+        const tens = abs % 100;
+        if (tens >= 11 && tens <= 14) return 'дней';
+        if (last === 1) return 'день';
+        if (last >= 2 && last <= 4) return 'дня';
+        return 'дней';
+    }
+
     HEYS.InsightsPI.patternModules = HEYS.InsightsPI.patternModules || {};
     HEYS.InsightsPI.patternModules.analyzeSleepWeight = analyzeSleepWeight;
     HEYS.InsightsPI.patternModules.analyzeSleepHunger = analyzeSleepHunger;
     HEYS.InsightsPI.patternModules.analyzeSleepQuality = analyzeSleepQuality;
+    HEYS.InsightsPI.patternModules.analyzeCoffeeSleep = analyzeCoffeeSleep;
 })(typeof window !== 'undefined' ? window : global);
