@@ -12984,37 +12984,6 @@ body:has(.widgets-tab) .widget--water .widget-water__bar,
   margin-top: 6px;
 }
 
-/* ─── Кадр «Шаги · Как сейчас», строка «вид · плитка шагов» (15 сентября) ───
-   Плитка 1×1: кикер, число 21/600 табличными чернилами БЕЗ единицы (шаги
-   считаются штуками) и полоса доли. Тонов состояний у шагов нет: цель по шагам
-   не бывает «перебрана» во вред, полоса доходит до края и останавливается —
-   поэтому здесь ни is-on-track, ни --bad, а заливка одна на все доли.
-   Дорожка на чернилах 8 % (--v4-line), а не 12 % общей «полосы цели»: 8 %
-   названы самой строкой контракта, как у полосы вечера в «Окне до сна».
-   Общий goalbar 4 px / track / 7 px не трогал. */
-.widget-v4-mini.widget-v4-steps .widget-v4-goal-hero {
-  gap: 3px;
-}
-
-.widget-v4-mini.widget-v4-steps .widget-v4-goal-value {
-  font-size: 21px;
-}
-
-/* «Шаги · нет данных»: прочерк 21/600 приглушёнными чернилами — тот же ход,
-   что у клетчатки и белка: ступени 42 % лестница не заводит, берётся --v4-ink-3.
-   Живое число ниже цели остаётся --v4-ink через neutral. */
-.widget-v4-mini.widget-v4-steps .widget-v4-goal-value--empty {
-  color: var(--v4-ink-3) /* v4-intentional */;
-}
-
-.widget-v4-goalbar--steps {
-  background: var(--v4-line); /* v4-intentional */
-}
-
-.widget-v4-goalbar--steps .widget-v4-goalbar__fill {
-  background: var(--v4-act); /* v4-intentional */
-}
-
 /* Кадр «Окно до сна · Вечер»: полоса вечера, не «вид · полоса цели».
    Дорожка --v4-line 8 % (data-v 07), не --v4-track 12 %. Общий goalbar
    4 px / track / 7 px и mini sleep now не трогал. */
