@@ -106,7 +106,7 @@ describe('morning check-in v4 layout vs canvas', () => {
     // отменяет разброс 14/16/18/22/24/34, стоявший в девяти кадрах одного шага.
     // Хвост «у шага веса 14 сверху» остался в соседней строке «вид шага» —
     // остаток прежней редакции, разобрано в
-    // UI_V4_FINDINGS.md#checkin-step-top-padding-two-rows.
+    // UI_V4_FINDINGS_HISTORY.md#checkin-step-top-padding-two-rows-closed-2026-09-15.
     expect(DAILY_CSS).toMatch(
       /\.mc-modal--daily \.mc-step-content \{[\s\S]*?padding: 16px 18px 0;/
     );

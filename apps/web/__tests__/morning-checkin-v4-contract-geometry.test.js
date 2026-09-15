@@ -273,7 +273,7 @@ describe('чек-ин v4: геометрия по контракту канва�
     // 14/16/18/22/24/34, который стоял в девяти кадрах одного шага. Хвост
     // «у шага веса 14 сверху» в соседней строке «вид шага» дизайнер не вычистил
     // — это остаток прежней редакции, разобрано в
-    // UI_V4_FINDINGS.md#checkin-step-top-padding-two-rows.
+    // UI_V4_FINDINGS_HISTORY.md#checkin-step-top-padding-two-rows-closed-2026-09-15.
     document.body.innerHTML = `
       <div class="mc-modal mc-modal--daily">
         <div class="mc-step-content" id="weight"><div class="mc-weight-step"></div></div>
