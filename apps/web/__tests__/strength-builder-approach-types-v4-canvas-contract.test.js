@@ -143,7 +143,7 @@ describe('Ж2 · типы подходов · canvas contract', { timeout: 45_00
         ['11', '.sb-at-grp .sb-aps-head > span:last-child', '✓', { color: CANVAS.gr }],
         ['12', '.sb-at-aps .sb-ap-num.is-warmup', 'разм.', { fontSize: '10px', color: CANVAS.ink56, height: '44px' }],
         ['15', '.sb-at-aps .sb-ap-num.is-work', '1', { backgroundColor: CANVAS.grBg, color: CANVAS.gr }],
-        ['17', '.sb-at-aps .sb-at-drop-tag', 'дроп', { backgroundColor: CANVAS.tint, color: CANVAS.ac2 }],
+        ['17', '.sb-at-aps .sb-at-drop-tag', 'сброс 1', { backgroundColor: CANVAS.tint, color: CANVAS.ac2 }],
         ['22', '.sb-at-tonnage-copy b', 'Рабочий тоннаж', { color: CANVAS.tx }],
         ['24', '.sb-at-tonnage-row > .n', '2\u00a0980 кг', { color: CANVAS.tx }],
         ['27', '.sb-at-unit.is-active', 'кг × повт', { backgroundColor: CANVAS.acs, color: CANVAS.bg }],
@@ -156,7 +156,7 @@ describe('Ж2 · типы подходов · canvas contract', { timeout: 45_00
       style.textContent = `${BASE_CSS}\n${computedCss(BLUE)}`;
       const colorRows = [
         ['15', '.sb-at-aps .sb-ap-num.is-work', '1', { backgroundColor: BLUE.grBg, color: BLUE.gr }],
-        ['17', '.sb-at-aps .sb-at-drop-tag', 'дроп', { backgroundColor: BLUE.tint, color: BLUE.ac2 }],
+        ['17', '.sb-at-aps .sb-at-drop-tag', 'сброс 1', { backgroundColor: BLUE.tint, color: BLUE.ac2 }],
         ['27', '.sb-at-unit.is-active', 'кг × повт', { backgroundColor: BLUE.acs, color: CANVAS.bg }]
       ];
       mismatches = mismatches.concat(assertRows(colorRows, 'blue'));

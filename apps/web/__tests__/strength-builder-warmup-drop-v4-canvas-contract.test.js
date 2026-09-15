@@ -124,7 +124,7 @@ describe('А3 · разминка и дроп-сет · canvas contract', { time
         ['09', '.sb-wd-grp .sb-aps-head', null, { gridTemplateColumns: '56px 1fr 1fr 44px' }],
         ['10', '.sb-wd-grp .sb-aps-head > span:nth-child(2)', 'Вес, кг', { textAlign: 'center' }],
         ['12', '.sb-wd-aps .sb-ap-num.is-warmup', 'разм.', { fontSize: '10px', color: CANVAS.ink56 }],
-        ['15', '.sb-wd-aps .sb-wd-drop-tag', 'дроп', { backgroundColor: CANVAS.c2, color: CANVAS.ac }],
+        ['15', '.sb-wd-aps .sb-wd-drop-tag', 'сброс 1', { backgroundColor: CANVAS.c2, color: CANVAS.ac }],
         ['19', '.sb-wd-volume-row:first-child > span', 'Объём упражнения', { color: CANVAS.tx }],
         ['21', '.sb-wd-volume-row:nth-child(2) .sb-wd-muted', 'не идёт', { color: CANVAS.ink56 }],
         ['23', '.sb-wd-volume-row.is-last .sb-wd-ok', 'идут все', { color: CANVAS.gr }]
@@ -159,7 +159,7 @@ describe('А3 · разминка и дроп-сет · canvas contract', { time
         document.querySelector('.sb-wd-volume-row:first-child > b')?.textContent || '',
         document.querySelector('.sb-wd-footnote')?.textContent?.slice(0, 40) || ''
       ].join(' › ');
-      if (!composite.includes('Приседания › 3 подхода · 1 разминочный › № / тип › разм. › дроп › Объём упражнения')) {
+      if (!composite.includes('Приседания › 3 подхода · 1 разминочный › № / тип › разм. › сброс 1 › Объём упражнения')) {
         mismatches.push({ id: 'текст', field: 'composite', expected: 'A3 composite prefix', actual: composite });
       }
 

@@ -75,7 +75,7 @@ describe('конструктор: подходы и типы', () => {
     expect(screen.getByLabelText('Рабочий подход номер 2')).toBeTruthy();
   });
 
-  it('ступень сброса не получает своего номера', () => {
+  it('ступень сброса не получает номера подхода, но получает свой', () => {
     render(React.createElement(SB.BuilderScreen, {
       training: training([{
         name: 'Жим лёжа',
@@ -87,7 +87,10 @@ describe('конструктор: подходы и типы', () => {
       onClose: () => {},
     }));
     fireEvent.click(screen.getByText('Разминка и дроп-сет'));
-    expect(screen.getByText('дроп')).toBeTruthy();
+    // Словарь зоны: «дроп» — имя ПРИЁМА, «сброс N» — имя ОДНОЙ ступени внутри
+    // него. Номер подхода ступень не получает — она продолжение первого.
+    expect(screen.getByText('сброс 1')).toBeTruthy();
+    expect(screen.queryByText('дроп')).toBeNull();
     expect(screen.queryByLabelText('Рабочий подход номер 2')).toBeNull();
   });
 

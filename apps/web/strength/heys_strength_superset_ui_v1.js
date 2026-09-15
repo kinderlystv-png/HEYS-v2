@@ -969,6 +969,24 @@
       return +stage.reps > 0;
     }
 
+    /**
+     * Подпись ступени дропа: «сброс 1», «сброс 2».
+     *
+     * Строка словаря зоны: «„ДРОП“ — имя ПРИЁМА… „СБРОС“ — имя ОДНОЙ ступени
+     * внутри этого приёма». Сводить к одному слову нельзя: «дроп 1» и «дроп 2»
+     * читаются как два разных дропа, а не как ступени одного.
+     *
+     * Номер считается по самим ступеням, а не по индексу строки: перед дропом
+     * может стоять разминочная, и тогда индекс и номер сброса разойдутся.
+     */
+    function dropStageLabel(allStages, stageIndex) {
+      let n = 0;
+      for (let k = 0; k <= stageIndex; k += 1) {
+        if (allStages[k] && allStages[k].isDrop) n += 1;
+      }
+      return 'сброс ' + n;
+    }
+
     function ownWeightLabel(weightKg, done) {
       const n = fmtNumber(weightKg);
       if (n) return n;
@@ -997,7 +1015,7 @@
               : (variant === 'approach-types'
                 ? 'sb-at-drop-tag'
                 : (variant === 'drop-set' ? 'sb-ds-drop-tag' : 'sb-drop-tag'))
-          }, 'дроп')
+          }, dropStageLabel(stages, si))
           : h('button', {
             type: 'button',
             className: 'sb-ap-num'

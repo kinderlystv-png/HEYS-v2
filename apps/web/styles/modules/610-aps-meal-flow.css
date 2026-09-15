@@ -4998,13 +4998,21 @@
   cursor: pointer;
 }
 
+/* Строка контракта «вид · лист копирования и переноса» (пакет 72): «Внизу ряд
+   кнопок: „Отмена“ обводкой по содержимому и главная заливкой на остаток
+   ширины». Обводка, а не заливка: две залитые кнопки в ряду спорят за роль
+   главного действия, а главное должно быть одно. Ширина по содержимому уже
+   была — flex: 0 0 auto. Обводка нарисована внутренней тенью, а не border:
+   border сдвинул бы содержимое на пиксель относительно главной кнопки рядом,
+   у которой обводки нет. */
 .meal-transfer-v4__button--cancel {
   flex: 0 0 auto;
   min-height: 44px;
   padding: 0 20px;
   color: var(--v4-ink-2, rgba(0, 0, 0, 0.56));
   font-size: 12.5px;
-  background: var(--v4-card); /* v4-intentional */
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--v4-edge); /* v4-intentional */
 }
 
 .meal-transfer-v4__button--primary {

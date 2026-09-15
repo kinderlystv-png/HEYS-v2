@@ -209,6 +209,23 @@ describe('food-meal · копирование и перенос v4', () => {
     });
   });
 
+  it('«Отмена» — обводка по содержимому, главная — заливка на остаток', () => {
+    // Строка «вид · лист копирования и переноса» (пакет 72): «Внизу ряд кнопок:
+    // „Отмена“ обводкой по содержимому и главная заливкой на остаток ширины».
+    // Две залитые кнопки в ряду спорят за роль главного действия, а главное
+    // должно быть одно. Кадр при этом всё ещё рисует «Отмену» залитой — верна
+    // строка: она новее и называет роль, а не цвет.
+    expect(CSS).toMatch(
+      /\.meal-transfer-v4__button--cancel\s*\{[^}]*background:\s*transparent;/s,
+    );
+    expect(CSS).toMatch(
+      /\.meal-transfer-v4__button--cancel\s*\{[^}]*box-shadow:\s*inset 0 0 0 1px var\(--v4-edge\)/s,
+    );
+    expect(CSS).toMatch(/\.meal-transfer-v4__button--cancel\s*\{[^}]*flex:\s*0 0 auto;/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__button--primary\s*\{[^}]*flex:\s*1 1 auto;/s);
+    expect(CSS).toMatch(/\.meal-transfer-v4__button--primary\s*\{[^}]*background:\s*var\(--v4-act\)/s);
+  });
+
   it('держит move-actions сразу после предупреждения, как в Canvas', () => {
     expect(CSS).toMatch(/\.meal-transfer-v4__move-content\s*\{[^}]*flex:\s*0 1 auto;/s);
     expect(CSS).toMatch(/\.meal-transfer-v4__move-content\s*\{[^}]*padding:\s*6px 18px 0;/s);

@@ -130,7 +130,7 @@ describe('Ж3 · дроп-сет · canvas contract', { timeout: 45_000 }, () =>
         ['09', '.sb-ds-grp .sb-ap.is-ds-main', null, { borderRadius: '12px' }],
         ['10', '.sb-ds-grp .sb-ap.is-ds-main .sb-ap-num.is-work', '4', { backgroundColor: CANVAS.acs, color: CANVAS.bg }],
         ['11', '.sb-ds-grp .sb-ap.is-ds-main .sb-ap-value', '75', { fontSize: '18px' }],
-        ['13', '.sb-ds-grp .sb-ds-drop-tag', 'дроп', { backgroundColor: CANVAS.tint, color: CANVAS.ac2 }],
+        ['13', '.sb-ds-grp .sb-ds-drop-tag', 'сброс 1', { backgroundColor: CANVAS.tint, color: CANVAS.ac2 }],
         ['17', '.sb-ds-volume-copy b', 'Подход 4 со сбросом', { color: CANVAS.tx }],
         ['19', '.sb-ds-volume-row > .n', '960 кг', { color: CANVAS.tx }],
         ['24', '.sb-ds-rule-num', '1', { color: CANVAS.ac }],
@@ -142,7 +142,7 @@ describe('Ж3 · дроп-сет · canvas contract', { timeout: 45_000 }, () =>
       style.textContent = `${BASE_CSS}\n${computedCss(BLUE)}`;
       const colorRows = [
         ['10', '.sb-ds-grp .sb-ap.is-ds-main .sb-ap-num.is-work', '4', { backgroundColor: BLUE.acs, color: CANVAS.bg }],
-        ['13', '.sb-ds-grp .sb-ds-drop-tag', 'дроп', { backgroundColor: BLUE.tint, color: BLUE.ac2 }],
+        ['13', '.sb-ds-grp .sb-ds-drop-tag', 'сброс 1', { backgroundColor: BLUE.tint, color: BLUE.ac2 }],
         ['27', '.sb-ds-why b', 'Почему не отдельный подход', { color: BLUE.ac2 }]
       ];
       mismatches = mismatches.concat(assertRows(colorRows, 'blue'));
