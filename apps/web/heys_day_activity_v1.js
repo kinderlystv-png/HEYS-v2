@@ -61,7 +61,21 @@
     return false;
   }
 
-  function trainingKcalFromZones(tr, kcalMin, r0) {
+  /**
+   * Расход тренировки. У силовой из конструктора он считается не по зонам, а по
+   * проделанной работе — решение владельца 15 сентября, строка «расход силовой
+   * — скромная оценка». Зоны у силовой подставлены по типу работы, и считать по
+   * ним значило бы умножать оценку на оценку; тоннаж известен точно.
+   *
+   * Путь один на все экраны: второй экземпляр формулы разошёлся бы молча, и
+   * число в ярусе перестало бы сходиться с карточкой.
+   */
+  function trainingKcalFromZones(tr, kcalMin, r0, bodyWeightKg) {
+    const estimate = HEYS.TrainingKernel?.strength?.strengthKcalEstimate?.(
+      tr,
+      bodyWeightKg > 0 ? { bodyWeightKg } : undefined,
+    );
+    if (estimate) return estimate.kcal;
     const z = tr.z || [0, 0, 0, 0];
     return z.reduce((s, min, i) => s + r0((+min || 0) * (kcalMin[i] || 0)), 0);
   }
@@ -240,9 +254,11 @@
       parts.push(minutes > 0 ? label + ' ' + minutes + ' мин' : label);
     }
 
+    // Масса тела нужна и тоннажу (упражнения на своём весе), и расходу: одна
+    // величина на оба, иначе число в ярусе разойдётся с карточкой.
+    const bodyWeightKg = Number(day && day.weightMorning) || 0;
     let tonnage = 0;
     if (ks && typeof ks.dayTonnage === 'function') {
-      const bodyWeightKg = Number(day && day.weightMorning) || 0;
       tonnage = ks.dayTonnage(day, bodyWeightKg > 0 ? { bodyWeightKg } : undefined);
     }
     const volume = formatVolumeShort(tonnage);
@@ -250,7 +266,10 @@
 
     const kcal = Number.isFinite(cardioKcal)
       ? cardioKcal
-      : performed.reduce((s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round), 0);
+      : performed.reduce(
+        (s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round, bodyWeightKg),
+        0,
+      );
     return { value: round(kcal) + ' ккал', sub: sub, strong: true };
   }
 

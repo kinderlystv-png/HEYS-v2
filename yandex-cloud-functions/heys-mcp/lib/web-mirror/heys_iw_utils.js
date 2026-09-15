@@ -45,6 +45,16 @@
     // Научная формула: MET × 3.5 × вес / 200 = ккал/мин
     // Источник: Ainsworth 2011, Compendium of Physical Activities
     calculateTrainingKcal: (training, weight = 70) => {
+      // Силовая из конструктора считается не по зонам и MET, а по проделанной
+      // работе: решение владельца 15 сентября, строка «расход силовой —
+      // скромная оценка». Пульс на силовой не мерят, зоны там подставлены по
+      // типу работы, и считать по ним значило бы умножать оценку на оценку —
+      // тогда как тоннаж известен точно.
+      const strength = global.HEYS?.TrainingKernel?.strength?.strengthKcalEstimate;
+      if (typeof strength === 'function') {
+        const estimate = strength(training, { bodyWeightKg: weight });
+        if (estimate) return estimate.kcal;
+      }
       if (!training || !training.z) return 0;
       const zones = training.z || [0, 0, 0, 0];
       const totalMinutes = zones.reduce((a, b) => a + (+b || 0), 0);

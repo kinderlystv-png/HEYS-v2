@@ -3886,8 +3886,13 @@
       }
       const dur = Math.round(Number(raw && raw.totalDurationMinutes));
       if (Number.isFinite(dur) && dur > 0) {
-        const m = Math.max(1, Math.min(180, dur));
-        return [0, m, 0, 0];
+        // Зоны человек не называл — делим по типу работы. Правило общее с
+        // мастером (решение владельца 15 сентября, строка «минуты по зонам —
+        // делим»): прежде конструктор клал всё в зону 2, мастер делил пополам,
+        // и одна тренировка давала разные числа в зависимости от пути ввода.
+        const split = HEYS.dayCalculations?.splitZoneMinutesByType;
+        if (typeof split === 'function') return split(dur, training?.type || 'strength');
+        return [0, Math.max(1, Math.min(180, dur)), 0, 0];
       }
       return [0, 1, 0, 0];
     }

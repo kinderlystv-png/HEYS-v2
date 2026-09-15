@@ -531,12 +531,45 @@
                     );
                     next = { ...next, z };
                 } else if (typeof wl.totalDurationMinutes === 'number' && wl.totalDurationMinutes >= 1) {
-                    const m = Math.max(1, Math.min(180, Math.round(wl.totalDurationMinutes)));
-                    next = { ...next, z: [0, m, 0, 0] };
+                    // Зоны человек не называл — делим по типу работы единым
+                    // правилом, тем же, что у мастера.
+                    next = { ...next, z: splitZoneMinutesByType(wl.totalDurationMinutes, 'strength') };
                 }
             }
             return next;
         });
+    }
+
+    /**
+     * Минуты тренировки по зонам пульса, когда человек зоны не называл.
+     *
+     * Правило одно на оба пути ввода — решение владельца 15 сентября, строка
+     * контракта «минуты по зонам — делим» (tab-activity.v4). Прежде конструктор
+     * клал всё время в зону 2, а мастер делил пополам: одна и та же тренировка
+     * давала разные числа в зависимости от того, как её внесли, и сравнивать
+     * недели было нельзя.
+     *
+     * Доли — часть контракта, а не догадка кода: силовая 60/40, кардио без
+     * пульса 70/30. Менять их можно решением, а не правкой в одном из путей,
+     * поэтому они лежат здесь, в одном месте на оба.
+     *
+     * Возвращается массив четырёх зон; зона 2 — индекс 1, зона 3 — индекс 2.
+     * Остаток от округления уходит в зону 2: она основная, и потерять минуту в
+     * ней заметнее, чем в третьей.
+     */
+    const ZONE_SHARES = { strength: [0.6, 0.4], cardio: [0.7, 0.3] };
+
+    function splitZoneMinutesByType(totalMinutes, type) {
+        const total = Math.max(0, Math.min(180, Math.round(Number(totalMinutes) || 0)));
+        if (!total) return [0, 0, 0, 0];
+        const shares = ZONE_SHARES[type === 'strength' ? 'strength' : 'cardio'];
+        const third = Math.round(total * shares[1]);
+        return [0, total - third, third, 0];
+    }
+
+    /** Названы ли зоны человеком: хотя бы одна минута проставлена руками. */
+    function hasNamedZones(zones) {
+        return Array.isArray(zones) && zones.length >= 4 && zones.some((m) => +m > 0);
     }
 
     /**
@@ -620,7 +653,9 @@
         getProductFromItem,
         exerciseRowHasTrackableContent,
         workoutLogHasTrackableContent,
-        dayHasTrackableWorkoutBuilder
+        dayHasTrackableWorkoutBuilder,
+        splitZoneMinutesByType,
+        hasNamedZones
     };
 
 })(window);

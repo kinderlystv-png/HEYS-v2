@@ -1202,6 +1202,53 @@
    * Назначенные куратором тренировки пропускаются: день с планом обязан давать
    * тот же тоннаж, что пустой.
    */
+  // Расход за силовую — СКРОМНАЯ оценка, решение владельца 15 сентября
+  // (строка «расход силовой — скромная оценка» в tab-activity.v4).
+  //
+  // Точно посчитать нельзя, только оценить, и оценки расходятся втрое: 72–176
+  // ккал за тренировку. Берётся нижняя граница, и причина в том, куда врёт
+  // ошибка: норма человека эти калории уже учитывает, и завышенный расход он
+  // съедает, не понимая, почему вес стоит. Заниженный виден сразу — вес идёт
+  // быстрее ожидаемого, и это поправимо.
+  //
+  // Считается по проделанной работе, а не по минутам и пульсу: у силовой пульс
+  // не мерят, а тоннаж известен точно. Разминочные подходы не считаются — они и
+  // в тоннаж не идут (строка «инвариант · разминка вне тоннажа»).
+  const STRENGTH_KCAL_PER_KG_LIFTED = 0.12;
+  const STRENGTH_KCAL_FLOOR = 30;
+  const STRENGTH_FLOOR_MINUTES = 10;
+
+  /** Минуты тренировки: из зон, иначе из журнала конструктора. */
+  function trainingMinutes(training) {
+    const zones = Array.isArray(training && training.z) ? training.z : null;
+    if (zones) {
+      const sum = zones.reduce((acc, m) => acc + (+m || 0), 0);
+      if (sum > 0) return sum;
+    }
+    const logged = +(training && training.workoutLog && training.workoutLog.totalDurationMinutes);
+    return logged > 0 ? logged : 0;
+  }
+
+  /**
+   * @returns {{kcal:number, approaches:number, tonnage:number}|null}
+   *   null — тренировка не из конструктора, считать нечего.
+   *   Части возвращаются вместе с числом: экран обязан показать оценку с
+   *   объяснением («оценка по 23 подходам · 4 200 кг тоннажа»), иначе она
+   *   читается как измерение.
+   */
+  function strengthKcalEstimate(training, opts) {
+    if (!isStrengthBuilder(training)) return null;
+    const agg = trainingTonnage(training, opts);
+    const tonnage = Math.round(agg.totalVolume);
+    const raw = tonnage * STRENGTH_KCAL_PER_KG_LIFTED;
+    // Пол в 30 ккал — для тренировки длиннее десяти минут: работа была, а
+    // тоннаж её не видит (своим весом без коэффициента, время, метры).
+    const kcal = trainingMinutes(training) > STRENGTH_FLOOR_MINUTES
+      ? Math.max(STRENGTH_KCAL_FLOOR, raw)
+      : raw;
+    return { kcal: Math.round(kcal), approaches: agg.doneApproaches, tonnage };
+  }
+
   function dayTonnage(day, opts) {
     if (!day || !Array.isArray(day.trainings)) return 0;
     let total = 0;
@@ -1249,6 +1296,7 @@
     __registered: true,
     isStrengthBuilder: isStrengthBuilder,
     trainingTonnage: trainingTonnage,
+    strengthKcalEstimate: strengthKcalEstimate,
     dayTonnage: dayTonnage,
     countStrengthWorkouts: countStrengthWorkouts,
     APPROACH_TYPES: APPROACH_TYPES,
