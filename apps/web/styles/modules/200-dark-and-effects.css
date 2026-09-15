@@ -1426,17 +1426,9 @@
   border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
 }
 
-/* Dark theme: Minimal training card */
-[data-theme$="dark"] .compact-zone-inline {
-  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
-}
-
-@media (hover: hover) {
-  [data-theme$="dark"] .compact-zone-inline:hover {
-  background: var(--v4-chip, #efe3cf);
-  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18));
-}
-}
+/* Dark theme: Minimal training card
+   Переопределений пилюль зон здесь больше нет: ряд «Минуты по зонам» пришёл им
+   на смену и цвет берёт ролями, которые сами следуют набору. */
 
 [data-theme$="dark"] .compact-train-footer {
   border-top-color: rgba(255, 255, 255, 0.08);

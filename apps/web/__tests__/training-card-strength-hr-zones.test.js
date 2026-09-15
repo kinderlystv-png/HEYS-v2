@@ -108,7 +108,7 @@ describe('strength card in hr_zones mode with a preserved workout log', () => {
     });
 
     expect(findNode(tree, byClass('ct-wb-card-body'))).toBeNull();
-    expect(findNode(tree, byClass('compact-train-zones-inline'))).not.toBeNull();
+    expect(findNode(tree, byClass('compact-train-zones'))).not.toBeNull();
   });
 
   it('still renders the journal for an explicit workout_builder record', () => {
@@ -122,7 +122,11 @@ describe('strength card in hr_zones mode with a preserved workout log', () => {
     });
 
     expect(findNode(tree, byClass('ct-wb-card-body'))).not.toBeNull();
-    expect(findNode(tree, byClass('compact-train-zones-inline'))).toBeNull();
+    // Ряд зон стоит и здесь: строка «минуты по зонам — как показаны» (пакет 72)
+    // ставит его у КАЖДОЙ тренировки с минутами, а не только у тех, что ведутся
+    // зонами. Прежде запись из конструктора оставалась без него, и подставленное
+    // распределение показать было негде.
+    expect(findNode(tree, byClass('compact-train-zones'))).not.toBeNull();
   });
 
   it('offers the journal back and revives the preserved exercises instead of blanking them', () => {

@@ -908,12 +908,6 @@
   {
     "zone": "home-widgets",
     "file": "styles/modules/000-base-and-gamification.css",
-    "host": ".compact-zone-inline",
-    "inset": "-6px 0"
-  },
-  {
-    "zone": "home-widgets",
-    "file": "styles/modules/000-base-and-gamification.css",
     "host": ".measurements-card__edit",
     "inset": "-9px 0"
   },

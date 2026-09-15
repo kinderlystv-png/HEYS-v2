@@ -86,13 +86,57 @@ describe('пометка оценённых зон', () => {
 
   it('кегль и тон подписи — как в контракте', () => {
     const body = rule('.compact-train-zones-estimated');
-    expect(body).toMatch(/font:\s*500 10\.5px\/1\.3/);
-    expect(body).toContain('var(--v4-ink-3');
+    expect(body).toMatch(/font:\s*500 10\.5px\/1\.4/);
+    // Правка дизайнера 15 сентября по замеру: подпись стоит отдельной строкой
+    // под списком, соседа по строке у неё нет, и ink-3 даёт 3,28 при пороге 4,5.
+    expect(body).toContain('var(--v4-ink-2');
+    expect(body).not.toContain('var(--v4-ink-3');
   });
 
-  it('подпись занимает свою строку, а чипы зон остаются в одну', () => {
-    // Перенос у ряда включён ради подписи; самих чипов всегда четыре и они
-    // влезают, поэтому переносить их нечему.
-    expect(rule('.compact-train-zones-estimated')).toContain('flex: 1 0 100%');
+  it('подпись стоит под списком своей строкой', () => {
+    expect(rule('.compact-train-zones-estimated')).toMatch(/padding:\s*8px 0 2px/);
+  });
+
+  it('ряд зон живёт внутри раскрытой карточки тренировки', () => {
+    // Не отдельной карточкой на «Активе»: минуты по зонам — свойство одной
+    // тренировки, а не дня, и при двух тренировках отдельная карточка
+    // потребовала бы либо сложить зоны в сумму, либо показать два ряда без имён.
+    expect(TRAININGS_SRC).toContain("className: 'compact-train-zones'");
+    expect(TRAININGS_SRC).toContain('foldedContentEl');
+  });
+
+  it('зоны 1 в ряду нет, а зоны 2–4 названы словами контракта', () => {
+    // Разминочный пульс в зонах продукта не учитывается — счёт начинается со
+    // второй, тем же правилом, по которому подстановка делит минуты 60/40.
+    expect(TRAININGS_SRC).toContain('const ZONE_ROW_INDEXES = [1, 2, 3]');
+    expect(TRAININGS_SRC).toContain("'Зона 2 · лёгкая'");
+    expect(TRAININGS_SRC).toContain("'Зона 3 · средняя'");
+    expect(TRAININGS_SRC).toContain("'Зона 4 · тяжёлая'");
+    expect(TRAININGS_SRC).not.toContain("'Зона 1");
+  });
+
+  it('пустая зона в ряд не попадает — как в обоих кадрах', () => {
+    // Кадр «оценены по типу» показывает две строки из трёх, «названы человеком»
+    // — три: строка есть там, где есть минуты.
+    expect(TRAININGS_SRC).toContain('ZONE_ROW_INDEXES.filter((zi) => +T.z[zi] > 0)');
+  });
+
+  it('нажимаемая строка держит 44 видимой высотой', () => {
+    // Тап по строке открывает разбор ккал этой зоны — он жил на пилюлях, и без
+    // ряда ему негде быть. Кадр даёт строке около 38; 44 добираются видимой
+    // высотой, а не прозрачным припуском: в этой зоне припусков нет ни у одной
+    // цели. Отступление названо здесь и в CSS.
+    const body = rule('.compact-train-zones__row');
+    expect(body).toMatch(/min-height:\s*44px/);
+    expect(body).toMatch(/padding:\s*13px 0/);
+    expect(CSS).not.toContain('.compact-train-zones__row::after');
+  });
+
+  it('имя зоны и минуты — кегль и тон контракта', () => {
+    expect(rule('.compact-train-zones__name')).toMatch(/font:\s*500 12px\/1/);
+    expect(rule('.compact-train-zones__name')).toContain('var(--v4-ink-2');
+    expect(rule('.compact-train-zones__value')).toMatch(/font:\s*600 12\.5px\/1/);
+    expect(rule('.compact-train-zones__value')).toContain('var(--v4-ink');
+    expect(rule('.compact-train-zones__value')).toContain('tabular-nums');
   });
 });

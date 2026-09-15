@@ -1531,11 +1531,6 @@ color: var(--v4-sand-ink-slate, #1f2937);
   color: var(--v4-ink) /* v4-intentional */;
 }
 
-/* Силовая: карточка конструктора (дневник в блоке активности) */
-.compact-train--workout-builder .compact-train-zones-inline {
-  display: none;
-}
-
 .ct-wb-card-body {
   width: 100%;
   margin-bottom: 8px;
@@ -3825,84 +3820,63 @@ color: var(--v4-sand-ink-slate, #1f2937);
   color: var(--v4-act-text, #8a4a20); /* v4-intentional */
 }
 
-/* Inline zones row — одна линия на любой ширине; подпись зоны сжимается при нехватке места */
-.compact-train-zones-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+/* Ряд «Минуты по зонам» внутри раскрытой карточки тренировки — кадры «Зоны ·
+   оценены по типу» и «Зоны · названы человеком», строка контракта «минуты по
+   зонам — как показаны». Пришёл на место пилюль «Z1 · —»: пилюли показывали
+   четыре зоны всегда, в том числе пустые и первую, которой в зонах продукта
+   нет. Список на первой поверхности радиусом 20 с полями 2/16, как все списки
+   v4; строка — имя зоны слева, минуты справа. */
+.compact-train-zones {
   width: 100%;
   min-width: 0;
   margin-bottom: 8px;
+  padding: 2px 16px;
+  border-radius: 20px;
+  background: var(--v4-c1, #f7efe2);
+}
+
+.compact-train-zones__title {
+  padding: 13px 0;
+  color: var(--v4-ink, #201e1d);
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
+}
+
+/* ОТСТУПЛЕНИЕ, названное вслух: кадр даёт строке поля 13/13 и высоту около 38,
+   а строка нажимается — тап открывает разбор ккал этой зоны, он жил на пилюлях
+   и без ряда ему негде быть. 44 держим ВИДИМОЙ высотой, как всё нажимаемое в
+   зоне: прозрачный припуск невидим глазу и непроверяем замером. Поля кадра при
+   этом не тронуты. */
+.compact-train-zones__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 13px 0;
+  border-top: 1px solid var(--v4-line, rgba(0, 0, 0, 0.08));
+  cursor: pointer;
+}
+
+.compact-train-zones__name {
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 500 12px/1 Manrope, system-ui, sans-serif;
+}
+
+.compact-train-zones__value {
+  color: var(--v4-ink, #201e1d);
+  font: 600 12.5px/1 Manrope, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Пометка подставленного распределения: «зоны оценены по типу тренировки»,
-   10,5 px тоном чернил 45 % (строка «минуты по зонам — как показаны»). Стоит в
-   том же ряду и занимает его целиком — перенос у ряда включён ради неё одной,
-   сами чипы зон по-прежнему не переносятся: их всегда четыре и они влезают. */
+   10,5 px (строка «минуты по зонам — как показаны»). Стоит отдельной строкой
+   ПОД списком, соседа по строке у неё нет — поэтому тон --v4-ink-2, как у
+   подписи расхода: правка дизайнера 15 сентября по замеру, ink-3 на первой
+   поверхности даёт 3,28 против порога 4,5. */
 .compact-train-zones-estimated {
-  flex: 1 0 100%;
-  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
-  font: 500 10.5px/1.3 Manrope, system-ui, sans-serif;
-}
-
-.compact-zone-inline {
-  flex: 1 1 0;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 6px 4px;
-  background: var(--v4-hero, #efe3cf);
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  position: relative;
-  transition: background-color, border-color 0.15s ease;
-}
-
-/* Цель касания 44 pt: ширина 44 px по контракту — добираем по высоте. */
-.compact-zone-inline::after {
-  content: '';
-  position: absolute;
-  inset: -6px 0;
-}
-
-@media (hover: hover) {
-  .compact-zone-inline:hover {
-  border-color: var(--v4-edge, rgba(0, 0, 0, 0.18)); /* v4-intentional */
-  background: var(--v4-hero, #efe3cf);
-}
-}
-
-.compact-zone-inline.has-value {
-  background: linear-gradient(135deg, var(--v4-accent-bg, #f0dcc6) 0%, color-mix(in srgb, var(--v4-warn-soft, #c9922e) 30%, var(--v4-accent-bg, #f0dcc6)) 100%); /* v4-intentional */
-  border-color: color-mix(in srgb, var(--v4-warn-soft, #c9922e) 55%, transparent); /* v4-intentional */
-}
-
-.compact-zone-inline .zone-label {
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--v4-ink-2) /* v4-intentional */;
-  text-transform: uppercase;
-}
-
-.compact-zone-inline .zone-value {
-  flex: 0 0 auto;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--v4-ink-2) /* v4-intentional */;
-}
-
-.compact-zone-inline .zone-kcal {
-  font-size: 9px;
-  color: var(--v4-act-text, #8a4a20); /* v4-intentional */
-  font-weight: 500;
+  padding: 8px 0 2px;
+  color: var(--v4-ink-2, rgba(0, 0, 0, 0.55));
+  font: 500 10.5px/1.4 Manrope, system-ui, sans-serif;
 }
 
 /* Footer: duration + ratings */

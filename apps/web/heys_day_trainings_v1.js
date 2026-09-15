@@ -12,6 +12,17 @@
   /** Как в шаге «Зоны пульса» / настройках профиля (индекс 0…3). */
   const WB_KCAL_ZONE_LABELS = ['Разминка', 'Жиросжигание', 'Аэробная', 'Анаэробная'];
 
+  // Имена зон в ряду «Минуты по зонам» — из строки контракта «минуты по зонам —
+  // как показаны», а не из списка выше: тот принадлежит вводу минут для ккал и
+  // называет зоны по обмену, а ряд называет их по тяжести. Первой зоны в ряду
+  // нет — разминочный пульс в зонах продукта не учитывается.
+  const ZONE_ROW_INDEXES = [1, 2, 3];
+  const ZONE_ROW_NAMES = {
+    1: 'Зона 2 · лёгкая',
+    2: 'Зона 3 · средняя',
+    3: 'Зона 4 · тяжёлая'
+  };
+
   function LucideStarIcon(props) {
     const filled = !!(props && props.filled);
     const size = (props && props.size) || 16;
@@ -4395,29 +4406,41 @@
         const isBuilder = isStrengthWorkoutBuilder(T);
         const wlLive = isBuilder ? ensureWorkoutLogShape(T) : null;
 
-        const zonesRow = !isBuilder && !isMorningActivation && React.createElement('div', { className: 'compact-train-zones-inline' },
-          [0, 1, 2, 3].map((zi) => {
-            const hasValue = +T.z[zi] > 0;
-            return React.createElement('span', {
-              key: 'z' + zi,
-              className: 'compact-zone-inline' + (hasValue ? ' has-value' : ''),
-              onClick: (e) => showZoneFormula && showZoneFormula(ti, zi, e)
-            },
-              React.createElement('span', { className: 'zone-label' }, 'Z' + (zi + 1)),
-              React.createElement('span', { className: 'zone-value' }, hasValue ? T.z[zi] : '—'),
-              hasValue && React.createElement('span', { className: 'zone-kcal' }, kcalZ(zi))
-            );
-          }),
-          // Подставленное распределение помечено — та же пометка и по тому же
-          // правилу, что у оценённых шагов (строка «минуты по зонам — как
-          // показаны»). Названные человеком зоны подписи не получают, и
-          // пометка снимается в том же ряду, как только он задал их сам:
-          // отдельного экрана для этого не заводим.
-          T.zonesEstimated && React.createElement('span', {
-            key: 'zones-estimated',
-            className: 'compact-train-zones-estimated'
-          }, 'зоны оценены по типу тренировки')
-        );
+        // Ряд «Минуты по зонам» — кадры «Зоны · оценены по типу» и «Зоны ·
+        // названы человеком», строка «минуты по зонам — как показаны».
+        //
+        // Живёт ВНУТРИ раскрытой карточки тренировки и стоит у каждой, где есть
+        // минуты, — не только у силовой: минуты по зонам это свойство одной
+        // тренировки, а не дня, и отдельной карточкой на «Активе» при двух
+        // тренировках пришлось бы либо сложить их зоны в сумму, либо показать
+        // два ряда без имён.
+        //
+        // Зоны 1 в ряду нет: разминочный пульс в зонах продукта не учитывается,
+        // счёт начинается со второй — тем же правилом, по которому подстановка
+        // делит минуты между второй и третьей.
+        const zonesRow = !isMorningActivation
+          && ZONE_ROW_INDEXES.some((zi) => +T.z[zi] > 0)
+          && React.createElement('div', { className: 'compact-train-zones' },
+            React.createElement('div', { className: 'compact-train-zones__title' }, 'Минуты по зонам'),
+            ZONE_ROW_INDEXES.filter((zi) => +T.z[zi] > 0).map((zi) =>
+              React.createElement('div', {
+                key: 'z' + zi,
+                className: 'compact-train-zones__row',
+                onClick: (e) => showZoneFormula && showZoneFormula(ti, zi, e)
+              },
+                React.createElement('span', { className: 'compact-train-zones__name' }, ZONE_ROW_NAMES[zi]),
+                React.createElement('span', { className: 'compact-train-zones__value' }, T.z[zi] + ' мин')
+              )
+            ),
+            // Подставленное распределение помечено — та же пометка и по тому же
+            // правилу, что у оценённых шагов. Названные человеком зоны подписи
+            // не получают, и пометка снимается в том же ряду, как только он
+            // задал их сам: отдельного экрана для этого не заводим.
+            T.zonesEstimated && React.createElement('div', {
+              key: 'zones-estimated',
+              className: 'compact-train-zones-estimated'
+            }, 'зоны оценены по типу тренировки')
+          );
 
         const showBuilderCta = !isBuilder && canOfferWorkoutBuilderOnCard(T);
         const strengthBuilderCtaRow = showBuilderCta && React.createElement('div', { className: 'ct-wb-enable-wrap' },
