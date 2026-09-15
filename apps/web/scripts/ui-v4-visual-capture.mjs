@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { createServer } from 'node:http';
 import path from 'node:path';
@@ -66,6 +67,107 @@ function canvasIndexOf(file) {
     canvasIndexCache.set(file, parseCanvasHtml(fs.readFileSync(full, 'utf8'), { file }));
   }
   return canvasIndexCache.get(file);
+}
+
+// Отпечаток css вместе с деревом @import. main.css — это оболочка из тридцати
+// двух строк @import, и vite подставляет модули в неё на лету: в сети виден один
+// main.css, а правка живёт в modules/730-*.css. Хеш одного файла с диска такую
+// правку не замечает, то есть штамп считал бы снимок свежим ровно там, где чаще
+// всего и правят.
+function cssTreeHash(file, unresolved, seen = new Set()) {
+  const key = path.resolve(file);
+  if (seen.has(key)) return '';
+  seen.add(key);
+  const text = fs.readFileSync(file, 'utf8');
+  let acc = text;
+  for (const match of text.matchAll(/@import\s+(?:url\()?\s*['"]([^'"]+)['"]/g)) {
+    const target = path.join(path.dirname(file), match[1].split('?')[0]);
+    if (fs.existsSync(target)) acc += cssTreeHash(target, unresolved, seen);
+    else unresolved.add(match[1]);
+  }
+  return crypto.createHash('sha1').update(acc).digest('hex').slice(0, 12);
+}
+
+// Штамп свежести снимка: что именно стенд подгрузил к моменту съёмки.
+//
+// Берём не состав бандлов «по зоне» из манифеста, а то, что страница реально
+// запросила (performance.getEntriesByType('resource')). Разница не
+// теоретическая: манифест отвечает на вопрос «что собрано», а не «что этот
+// экран подтянул», и список по зоне пришлось бы угадывать — это ровно то
+// угадывание «на глаз по зонам», из-за которого пропущенная пара выглядит
+// обновлённой и показывает починенное расхождение как живое. Список
+// запрошенного врать не умеет: чего не запросили — того на снимке нет.
+//
+// Имя js-бандла уже содержит хеш содержимого, поэтому достаточно имени. У css
+// хеша в имени нет (стенд берёт их от vite прямо из исходников), поэтому рядом
+// пишем отпечаток файла с диска — иначе правка стилей, а это добрая половина
+// правок v4, прошла бы мимо штампа молча.
+async function writeLoadedAssets(page, item) {
+  try {
+    const urls = await page.evaluate(() =>
+      performance
+        .getEntriesByType('resource')
+        .map((entry) => entry.name)
+        .filter((name) => /\.(js|css)(\?|$)/.test(name)),
+    );
+    const js = new Set();
+    const css = {};
+    const unresolved = new Set();
+    for (const url of urls) {
+      let pathname;
+      try {
+        pathname = decodeURIComponent(new URL(url).pathname);
+      } catch {
+        unresolved.add(url);
+        continue;
+      }
+      if (/\.bundle\.[0-9a-f]+\.js$/.test(pathname)) {
+        js.add(path.posix.basename(pathname));
+        continue;
+      }
+      if (!pathname.endsWith('.css')) continue;
+      // Стенд отдаёт css и из исходников (apps/web/styles/...), и из public.
+      const candidates = [
+        path.join(ROOT, 'apps', 'web', pathname.replace(/^\//, '')),
+        path.join(ROOT, 'apps', 'web', 'public', pathname.replace(/^\//, '')),
+      ];
+      const hit = candidates.find((candidate) => fs.existsSync(candidate));
+      // Не найденный на диске файл записываем отдельным списком, а не молча
+      // пропускаем: «мы это не смотрели» обязано отличаться от «сошлось».
+      if (!hit) {
+        unresolved.add(pathname);
+        continue;
+      }
+      css[pathname] = cssTreeHash(hit, unresolved);
+    }
+    // Канвас кадра знает только манифест съёмки: в планах пар у половины
+    // записей frame: null, хотя половина пары рисуется как раз из канваса.
+    // Без этой строки редакция канваса у таких пар не сторожилась бы вовсе.
+    let canvas = null;
+    if (item.canvasFrame?.file) {
+      const canvasPath = path.join(CANVAS_PACK_DIR, item.canvasFrame.file);
+      canvas = {
+        file: path.relative(ROOT, canvasPath).replaceAll('\\', '/'),
+        label: item.canvasFrame.label || null,
+        sha: fs.existsSync(canvasPath)
+          ? crypto.createHash('sha1').update(fs.readFileSync(canvasPath)).digest('hex').slice(0, 12)
+          : null,
+      };
+    }
+    fs.writeFileSync(
+      path.join(OUT_DIR, `${item.id}.assets.json`),
+      `${JSON.stringify(
+        { js: [...js].sort(), css, canvas, unresolved: [...unresolved].sort() },
+        null,
+        1,
+      )}
+`,
+    );
+  } catch (error) {
+    // Штамп — вспомогательная запись: его отсутствие делает пару устаревшей,
+    // то есть ошибка здесь не должна ронять саму съёмку.
+    console.warn(`[ui-v4-visual] ${item.id}: список загруженного не снялся — ${error?.message || error}`);
+  }
 }
 
 function validateManifest(scope) {
@@ -3233,6 +3335,7 @@ async function openCase(browser, item, snapshot, options = {}) {
     } else {
       await page.screenshot({ path: file, fullPage: false });
     }
+    await writeLoadedAssets(page, item);
     const allowedConsoleErrors = item.allowedConsoleErrors || [];
     const ignoredConsoleErrors = consoleErrors.filter((message) =>
       allowedConsoleErrors.some((fragment) => message.includes(fragment)),
