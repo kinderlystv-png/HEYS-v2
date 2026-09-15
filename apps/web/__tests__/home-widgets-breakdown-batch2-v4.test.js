@@ -195,7 +195,8 @@ describe('листы разбора batch2 на живых днях', () => {
     expect(model.chart.kind).toBe('factorRows');
     expect(model.chart.factors.map((f) => f.label))
       .toEqual(['Вода', 'Еда до сна', 'Шаги', 'Кофеин']);
-    // Поля «последний кофе» в дневнике нет — пункт без тона и без полосы.
+    // Ответ про кофе уходит во ВЧЕРАШНЮЮ запись, поэтому у сегодняшнего дня
+    // поле пустое — пункт без тона и без полосы.
     const caffeine = model.chart.factors[3];
     expect(caffeine.tone).toBe('none');
     expect(caffeine.pct).toBe(0);
@@ -215,6 +216,51 @@ describe('листы разбора batch2 на живых днях', () => {
     // Экранного времени в листе нет — решение владельца 30 августа.
     expect(JSON.stringify(model)).not.toContain('Экран');
     expect(model.chart.dots.length).toBe(7);
+  });
+
+  it('«в среднем N из M» считается по тем же пунктам, что стоят в знаменателе', () => {
+    // Дефект, найденный разведкой 15 сентября: среднее брало у каждого дня его
+    // собственный набор пунктов, а знаменатель — сегодняшний. Ответ про кофе
+    // уходит во вчерашнюю запись, поэтому во вчерашних днях пунктов четыре, а
+    // сегодня три — и строка могла прочитаться как «Закрыто в среднем 3,6 из 3».
+    const model = build('sleepReady');
+    const avg = model.stats.find((r) => r.label === 'Закрыто в среднем');
+    expect(avg).toBeTruthy();
+    const [value, total] = String(avg.value).split(' из ').map((n) => Number(n.replace(',', '.')));
+    expect(total).toBe(3);
+    expect(value).toBeLessThanOrEqual(total);
+  });
+
+  it('вчерашний кофе не задирает среднее выше знаменателя', () => {
+    // Живое условие: у всех прошлых дней кофе отвечен и закрыт, у сегодняшнего
+    // ответа ещё нет. Прежний счёт давал среднее по четырём пунктам при
+    // знаменателе три.
+    // У прошлых дней закрыты ВСЕ четыре пункта: кофе отвечен, а последний приём
+    // отодвинут за три часа до отбоя. Так старый счёт давал среднее 4 при
+    // знаменателе 3 — число, которое человек прочитать не может.
+    const withCoffee = (iso) => {
+      const day = makeDay(iso);
+      day.meals = day.meals.slice(0, 3);
+      day.lastCoffee = { choice: 'before12', time: null, answeredAt: 1 };
+      return day;
+    };
+    const byIso = new Map();
+    for (let i = 0; i < 14; i += 1) byIso.set(isoOf(i), i === 0 ? makeDay(isoOf(i)) : withCoffee(isoOf(i)));
+    const data = window.HEYS.Widgets.data;
+    data._getDay = () => byIso.get(isoOf(0));
+    data._getDayByDate = (iso) => byIso.get(iso) || null;
+    data._getDayTotals = () => data._getDayTotalsFor(byIso.get(isoOf(0)));
+    // Разбор ответа живёт в шаге чек-ина — второго чтения поля в продукте нет,
+    // поэтому и в стенде его подставляем оттуда же, а не считаем заново.
+    window.HEYS.Steps = {
+      getLastCoffeeMinutes: (day) => (day && day.lastCoffee ? 12 * 60 : undefined),
+    };
+
+    const model = build('sleepReady');
+    const avg = model.stats.find((r) => r.label === 'Закрыто в среднем');
+    const [value, total] = String(avg.value).split(' из ').map((n) => Number(n.replace(',', '.')));
+    expect(total).toBe(3);
+    expect(value).toBeLessThanOrEqual(3);
   });
 
   it('ни один из шести не открывается пустым', () => {
