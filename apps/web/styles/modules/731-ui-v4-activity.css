@@ -325,6 +325,46 @@ body:has(.activity-v4) .hdr::after {
   color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
 }
 
+/* Объяснение под числом расхода: «оценка по 23 подходам · 4 200 кг тоннажа».
+   Строка контракта «расход силовой — как показан» — 11 px/500 тоном чернил
+   45 %. Она нарочно не выглядит кнопкой: это подпись, которая раскрывается, а
+   не действие.
+   Цель касания держится ВИДИМОЙ высотой 44, как у всего нажимаемого в зоне, а
+   не прозрачным припуском: припуск невидим глазу и непроверяем замером — это
+   решение зоны, и исключений из него здесь не заводим. Кегль подписи при этом
+   прежний: тише числа её делает тон и размер шрифта, а не высота строки. */
+.activity-v4-estimate {
+  margin-top: 2px;
+}
+
+.activity-v4-estimate__line {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font: 500 11px/1.3 Manrope, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.activity-v4-estimate__why {
+  margin-top: 6px;
+}
+
+.activity-v4-estimate__why-line {
+  margin: 0;
+  color: var(--v4-ink-3, rgba(0, 0, 0, 0.45));
+  font: 500 11px/1.4 Manrope, system-ui, sans-serif;
+}
+
+.activity-v4-estimate__why-line + .activity-v4-estimate__why-line {
+  margin-top: 4px;
+}
+
 .activity-v4-today__sub--running {
   color: var(--v4-act-text, #8a4a20);
 }

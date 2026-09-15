@@ -177,6 +177,40 @@
   }
 
   /** Число объёма словами кадра: «1,9 т» от тонны, иначе «460 кг». */
+  /** Склонение «подход» по числу: «23 подходам», «2 подходам», «1 подходу». */
+  function podhodDative(n) {
+    const abs = Math.abs(Math.round(Number(n) || 0));
+    const last = abs % 10;
+    const tens = abs % 100;
+    return last === 1 && tens !== 11 ? 'подходу' : 'подходам';
+  }
+
+  /**
+   * Объяснение под числом расхода: «оценка по 23 подходам · 4 200 кг тоннажа».
+   *
+   * Обе величины человек сверяет со своей тренировкой — в отличие от
+   * коэффициента, который проверить собой нельзя. Поэтому проценты и
+   * коэффициенты на экран не выходят (строка «расход силовой — как показан»).
+   * Тоннаж здесь пишется килограммами целиком, а не «4,2 т»: рядом стоит число
+   * подходов, и две разные единицы в одной строке читаются хуже, чем длинное
+   * число.
+   */
+  function formatStrengthEstimate(estimate) {
+    if (!estimate || !(estimate.approaches > 0)) return '';
+    const kg = Math.round(Number(estimate.liftedKg) || 0);
+    // Разряд тысяч — тот же, что во всём продукте: неразрывный пробел от
+    // локали, а не свой пробел руками.
+    return 'оценка по ' + estimate.approaches + ' ' + podhodDative(estimate.approaches)
+      + ' · ' + kg.toLocaleString('ru-RU') + ' кг тоннажа';
+  }
+
+  // Две строки раскрывашки. Закрыта по умолчанию, состояние не запоминается:
+  // объяснение читают один раз, и держать его открытым незачем.
+  const STRENGTH_ESTIMATE_WHY = [
+    'Точного расхода силовой не знает никто — считаем по проделанной работе',
+    'Берём скромную оценку: лучше недосчитать, чем съесть лишнее',
+  ];
+
   function formatVolumeShort(kg) {
     const n = Math.max(0, Number(kg) || 0);
     if (n <= 0) return '';
@@ -270,7 +304,26 @@
         (s, t) => s + trainingKcalFromZones(t, kcalMin || [0, 0, 0, 0], round, bodyWeightKg),
         0,
       );
-    return { value: round(kcal) + ' ккал', sub: sub, strong: true };
+    // Оценка, выданная без объяснения, читается как измерение — поэтому части
+    // расхода уходят наверх вместе с числом (строка «расход силовой — как
+    // показан»). Суммируем по всем силовым дня: строка яруса одна.
+    let approaches = 0;
+    let liftedKg = 0;
+    for (let i = 0; i < performed.length; i++) {
+      const estimate = ks && typeof ks.strengthKcalEstimate === 'function'
+        ? ks.strengthKcalEstimate(performed[i], bodyWeightKg > 0 ? { bodyWeightKg } : undefined)
+        : null;
+      if (!estimate) continue;
+      approaches += estimate.approaches;
+      liftedKg += estimate.tonnage;
+    }
+
+    return {
+      value: round(kcal) + ' ккал',
+      sub: sub,
+      strong: true,
+      estimate: approaches > 0 ? { approaches, liftedKg } : null,
+    };
   }
 
   const MONTHS_RU_GEN = [
@@ -708,6 +761,9 @@
     const [heroOpen, setHeroOpen] = useState(false);
     const [sheetOpen, setSheetOpen] = useState(false);
     const [cardioOpen, setCardioOpen] = useState(false);
+    // Закрыта по умолчанию и состояние не запоминается: объяснение читают один
+    // раз, держать его открытым незачем (строка «расход силовой — как показан»).
+    const [estimateOpen, setEstimateOpen] = useState(false);
     const [monthOpen, setMonthOpen] = useState(false);
     const [calOpen, setCalOpen] = useState(false);
     const [loadOpen, setLoadOpen] = useState(false);
@@ -1199,6 +1255,26 @@
       ),
 
       React.createElement('div', { className: 'activity-v4-today' }, todayRows),
+
+      // Оценка без объяснения читается как измерение, поэтому число расхода не
+      // остаётся голым (строка «расход силовой — как показан»). Строка своя, а
+      // не подпись строки «Тренировки»: у той тап уже занят раскрытием состава,
+      // и два действия в одной строке спорили бы за палец.
+      trainingsRow.estimate && React.createElement('div',
+        { className: 'activity-v4-estimate' },
+        React.createElement('button', {
+          type: 'button',
+          className: 'activity-v4-estimate__line',
+          'aria-expanded': estimateOpen,
+          onClick: () => setEstimateOpen((v) => !v)
+        }, formatStrengthEstimate(trainingsRow.estimate)),
+        estimateOpen && React.createElement('div', { className: 'activity-v4-estimate__why' },
+          STRENGTH_ESTIMATE_WHY.map((line, index) => React.createElement('p', {
+            key: 'why-' + index,
+            className: 'activity-v4-estimate__why-line'
+          }, line))
+        )
+      ),
 
       // Аккордеон остался только внутри тренировок — для карточек с журналом
       // подходов (контракт строка 6). Раскрывается тапом по строке выше.
