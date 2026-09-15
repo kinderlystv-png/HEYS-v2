@@ -365,8 +365,12 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 08.09: один typed «≠» снят параллельной полосой — typedMismatch 125 → 124.
     // 08.09: 131 legacy «—» получили naKind (scripts/.reports-insights-nakind-apply.mjs)
     // — notApplicable 131 → 0.
+    // 15.09: строка «ярус „Метаболизм“ — входы, не карточки» сведена и стала
+    // «=» — typedMismatch 122 → 121. Здесь это НАСТОЯЩИЙ разбор долга, а не
+    // переписанная дизайнером строка: ярус собран входами, четыре карточки
+    // уехали за вход, кадры обоих экранов были нарисованы ещё в 65-й сборке.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [122, '4d03c53974c41550'],
+    typedMismatch: [121, '696a07d44347a875'],
     notApplicable: [0, 'e3b0c44298fc1c14'],
   }),
   'service-curator': Object.freeze({
