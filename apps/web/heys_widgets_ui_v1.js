@@ -5683,12 +5683,43 @@
     );
   }
 
-  /** Два вида канваса: 35 «Неделя» 2×1 и 36 «Месяц» 2×2, оба — тренды. */
+  /** Полоса доли у шагов: дорожка на чернилах 8 %, заливка --acs, тонов нет.
+      Отдельная от «вид · полоса цели»: там дорожка 12 % и заливка меняется на
+      шалфей от 67 %, а у шагов состояний не бывает — цель не «перебирается» во
+      вред, полоса просто доходит до края и останавливается. */
+  function v4StepsGoalBar(pct) {
+    const width = Math.max(0, Math.min(100, Number(pct) || 0));
+    return React.createElement('div', { className: 'widget-v4-goalbar widget-v4-goalbar--steps' },
+      React.createElement('span', {
+        className: 'widget-v4-goalbar__fill',
+        style: { width: `${width}%` }
+      })
+    );
+  }
+
+  /** Три вида канваса: 35 «Неделя» 2×1, 36 «Месяц» 2×2 и «Как сейчас» 1×1. */
   function StepsVariantBody({ variantId, data }) {
     const goal = Number(data?.goal) || 10000;
     const daysWithData = Number(data?.daysWithData) || 0;
     // Дней с шагами меньше двух — тренда ещё нет.
     const enoughDays = daysWithData >= 2;
+
+    // Кадр «Шаги · Как сейчас»: кикер, число без единицы и полоса доли.
+    // Единицы нет намеренно — шаги считаются штуками, подписи не требуют.
+    if (variantId === 'now') {
+      const hasData = data?.hasData === true && data?.steps != null;
+      return React.createElement('div', { className: 'widget-v4-mini widget-v4-steps widget-v4-steps--now' },
+        v4Kicker('Шаги'),
+        React.createElement('div', { className: 'widget-v4-goal-hero' },
+          React.createElement('span', {
+            className: 'widget-v4-goal-value '
+              + (hasData ? 'widget-v4-val--neutral' : 'widget-v4-goal-value--empty')
+          }, hasData ? formatRuThousands(data.steps) : '—')
+        ),
+        // Числа за день ещё нет — полосы тоже нет: строка «шаги · нет данных».
+        hasData ? v4StepsGoalBar(data?.pct) : null
+      );
+    }
 
     if (variantId === 'month') {
       const avg = data?.avgMonth;

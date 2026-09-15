@@ -306,7 +306,7 @@ describe('реестр и каталог видов шести виджетов'
     });
   });
 });
-describe('шаги · оба вида — тренды (переписаны 22 августа)', () => {
+describe('шаги · два тренда и плитка дня', () => {
   beforeEach(() => {
     delete window.HEYS;
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -369,17 +369,23 @@ describe('шаги · оба вида — тренды (переписаны 22 
     expect(data.getStepsData().daysWithData).toBe(1);
   });
 
-  it('вида «сейчас» в каталоге больше нет, дефолт — «Неделя» 2×1', () => {
+  // Плитка «Как сейчас» вернулась 15 сентября своим кадром и строкой «вид ·
+  // плитка шагов». Дефолтом она при этом не становится: строка «шаги» держит
+  // трендовый дефолт, потому что в течение дня числа ещё нет. Спор двух строк
+  // пакета записан в UI_V4_FINDINGS.md, геометрия плитки — в
+  // home-widgets-steps-now-canvas-geometry.test.js.
+  it('к двум трендам добавлена плитка дня, дефолт остался «Неделя» 2×1', () => {
     delete window.HEYS;
     window.HEYS = { Widgets: { emit: () => {}, on: () => {}, off: () => {} } };
     eval(VARIANTS_SRC);
     const V4 = window.HEYS.Widgets.VariantsV4;
     expect(V4.getCatalog('steps').map((v) => [v.id, v.size])).toEqual([
       ['week', '2x1'],
+      ['now', '1x1'],
       ['month', '2x2']
     ]);
     expect(V4.getDefaultVariant('steps').id).toBe('week');
-    // «Как сейчас» и «До цели» сняты: числа «сейчас» у шагов не существует.
+    // Прежние «Как сейчас» и «До цели» другой механики не возвращаются.
     expect(V4.getCatalog('steps').some((v) => v.id === 'mini' || v.id === 'to_goal')).toBe(false);
   });
 });
