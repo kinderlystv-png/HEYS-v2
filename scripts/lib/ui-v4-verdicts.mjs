@@ -486,7 +486,9 @@ export const LEGACY_SCHEMA_BASELINE = Object.freeze({
     // 06.09, package 43 agent-9: «Актив · шаги оценены · 10» ink-2 pill → «=»;
     // typedMismatch 29 → 28.
     mismatch: [0, 'e3b0c44298fc1c14'],
-    typedMismatch: [28, 'adfbd0ea39f3e76d'],
+    // 15.09, сборки 68–69: шесть «≠» ушли вместе с закрытыми строками зоны —
+    // распределение минут, расход силовой и рекорд решены владельцем.
+    typedMismatch: [22, '93f7efbade811a4f'],
     notApplicable: [62, 'b3191bb9fbbd6910'],
   }),
   tips: Object.freeze({
