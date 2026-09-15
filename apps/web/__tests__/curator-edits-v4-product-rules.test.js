@@ -206,6 +206,35 @@ describe('лист правок куратора · правила продук�
 
   // ── Свёртка дня по типам (строка «очень много правок за день») ──
 
+  // Подпись «Проставлена задним числом»: строка контракта «подпись „задним
+  // числом“ — условие» даёт ей 10,5/500 тоном var(--ink-3) и ОТДЕЛЬНУЮ строку.
+  // Числа читаем из самой строки контракта, а не пишем литералом: перепишет
+  // дизайнер — тест упадёт и позовёт сводить, а не тихо охранит прежнее.
+  it('подпись «задним числом» набрана числами своей строки контракта', () => {
+    const canvas = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        '../../../docs/ui/handoff-v4/canvas/Переработка дизайна приложения/design_handoff_heys_v4/curator-edits.v4.dc.html',
+      ),
+      'utf8',
+    );
+    const head = '<b>подпись «задним числом» — условие</b><span data-v="';
+    const at = canvas.indexOf(head);
+    expect(at, 'строки «подпись „задним числом“ — условие» нет в канвасе').toBeGreaterThan(-1);
+    const row = canvas.slice(at + head.length, canvas.indexOf('"', at + head.length));
+    expect(row).toContain('10,5 px/500');
+    expect(row).toContain('var(--ink-3)');
+    expect(row).toContain('отдельной строкой');
+
+    const rule = requireRule(CA_MODAL_CSS, '.ca-modal__item-backdated').body;
+    expect(rule).toContain('font-size: 10.5px');
+    expect(rule).toContain('font-weight: 500');
+    expect(rule).toContain('var(--v4-ink-3');
+    // «Отдельной строкой» — это display:block у подписи, стоящей после
+    // расшифровки, а не вместо неё.
+    expect(rule).toContain('display: block');
+  });
+
   it('строки свёртки по типам и раскрытые под ними правки держат правило «область нажатия ≥ 44»', () => {
     mountCss();
     const banner = loadBanner();

@@ -369,6 +369,67 @@ describe('CuratorActionsBanner review modal', () => {
     expect(document.querySelector('.ca-modal__content')?.textContent).not.toContain('Ужин');
   });
 
+  // Подпись «Проставлена задним числом» — строка контракта «подпись „задним
+  // числом“ — условие» (curator-edits.v4, названа заново 14 сентября): стоит,
+  // когда куратор внёс правку ПОЗЖЕ того дня, к которому относится запись.
+  // Сравниваются календарные дни, не часы.
+  //
+  // Время правки собирается из МЕСТНОЙ даты, а не из строки с «Z»: условие
+  // считает день по часам человека, и тест в другом поясе не должен менять
+  // ответ. Прежняя редакция строки говорила обратное — «правка раньше записи»,
+  // то есть будущим числом; по ней подпись встала бы ровно там, где неверна.
+  const localIso = (y, m, d, hh, mm) => new Date(y, m - 1, d, hh, mm, 0).toISOString();
+  const waterEntry = (createdAt, day = '2026-07-05') => {
+    const entry = createEntry('44444444-4444-4444-8444-444444444444', createdAt, [
+      { type: 'water_set', date: day, ml: 1800 },
+    ]);
+    entry.keys = [`heys_dayv2_${day}`];
+    return entry;
+  };
+  const showRows = async (entry) => {
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([entry]));
+    await banner.checkAndShow();
+    return Array.from(document.querySelectorAll('.ca-modal__item-backdated'))
+      .map((node) => node.textContent);
+  };
+
+  it('правка следующим днём получает подпись «задним числом»', async () => {
+    expect(await showRows(waterEntry(localIso(2026, 7, 6, 12, 0)))).toEqual([
+      'Проставлена задним числом',
+    ]);
+  });
+
+  it('правка в 23:50 того же дня подписи не получает', async () => {
+    expect(await showRows(waterEntry(localIso(2026, 7, 5, 23, 50)))).toEqual([]);
+  });
+
+  it('правка в 00:10 следующего дня — получает: считаются дни, а не часы', async () => {
+    expect(await showRows(waterEntry(localIso(2026, 7, 6, 0, 10)))).toEqual([
+      'Проставлена задним числом',
+    ]);
+  });
+
+  it('подпись стоит у любой строки правки, а не только у воды', async () => {
+    const meal = createEntry('55555555-5555-4555-8555-555555555555', localIso(2026, 7, 6, 12, 0), [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'lunch', meal_label: 'Обед', items: [{ name: 'Суп' }] },
+    ]);
+    expect(await showRows(meal)).toEqual(['Проставлена задним числом']);
+  });
+
+  it('подпись не подменяет расшифровку строки — обе на месте', async () => {
+    const meal = createEntry('66666666-6666-4666-8666-666666666666', localIso(2026, 7, 6, 12, 0), [
+      { type: 'meal_added', date: '2026-07-05', meal_id: 'lunch', meal_label: 'Обед', items: [{ name: 'Суп' }] },
+    ]);
+    const banner = loadBanner();
+    window.HEYS.YandexAPI.getMyCuratorChangelogSince.mockResolvedValue(response([meal]));
+    await banner.checkAndShow();
+    // Расшифровка отвечает на «что сделали», подпись — на «когда»: подменить
+    // первую второй значит потерять то, что человек ищет в списке.
+    expect(document.querySelector('.ca-modal__item-sub')).not.toBeNull();
+    expect(document.querySelector('.ca-modal__item-backdated')).not.toBeNull();
+  });
+
   it('keeps changes for different days in one modal grouped by date', async () => {
     const today = createEntry('11111111-1111-4111-8111-111111111111', '2026-07-05T09:00:00.000Z', [
       { type: 'meal_added', date: '2026-07-05', meal_id: 'breakfast', meal_label: 'Завтрак', items: [{ name: 'Овсянка' }] },

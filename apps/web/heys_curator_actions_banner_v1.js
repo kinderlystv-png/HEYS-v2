@@ -415,9 +415,52 @@
     return `<span class="ca-modal__item-sub${nowrap}">${escapeHtml(subtitle)}</span>`;
   }
 
-  function renderRowCopyHtml(copy) {
+  /**
+   * Подпись «Проставлена задним числом».
+   *
+   * Строка контракта «подпись „задним числом“ — условие» (curator-edits.v4,
+   * названа заново 14 сентября): подпись стоит, когда куратор внёс правку
+   * ПОЗЖЕ того дня, к которому относится запись. Сравниваются КАЛЕНДАРНЫЕ ДНИ,
+   * не часы: правка в 23:50 того же дня подписи не получает, в 00:10
+   * следующего — получает.
+   *
+   * День правки берём по времени устройства, как всюду в продукте: человек
+   * читает лист своими часами, и «следующий день» у него свой.
+   *
+   * Прежняя редакция строки говорила обратное — «дата правки раньше даты
+   * записи», то есть будущим числом. По ней подпись встала бы ровно там, где
+   * она неверна, и это хуже её отсутствия.
+   */
+  function isBackdatedEdit(entry, action) {
+    const target = targetDateForAction(entry, action);
+    if (!target) return false;
+    const madeAt = entry && entry.created_at;
+    if (!madeAt) return false;
+    const at = new Date(madeAt);
+    if (Number.isNaN(at.getTime())) return false;
+    const two = (n) => String(n).padStart(2, '0');
+    const madeOn = `${at.getFullYear()}-${two(at.getMonth() + 1)}-${two(at.getDate())}`;
+    return madeOn > target;
+  }
+
+  // Группа собирает несколько правок под одной строкой, поэтому подпись на ней
+  // стоит, только если задним числом сделаны ВСЕ: иначе одна строка утверждала
+  // бы про своевременные правки то, чего не было.
+  function isBackdatedGroup(action) {
+    const members = Array.isArray(action && action.members) ? action.members : [];
+    if (!members.length) return false;
+    return members.every((m) => m && isBackdatedEdit(m.entry, m.action));
+  }
+
+  function renderBackdatedHtml(backdated) {
+    return backdated
+      ? '<span class="ca-modal__item-backdated">Проставлена задним числом</span>'
+      : '';
+  }
+
+  function renderRowCopyHtml(copy, backdated) {
     const sub = renderItemSubtitleHtml(copy.subtitle);
-    return `<span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${sub}</span>`;
+    return `<span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${sub}${renderBackdatedHtml(backdated)}</span>`;
   }
 
   function renderMealCardHtml(a, targetId, entry) {
@@ -443,7 +486,7 @@
     return `
       <li class="ca-modal__meal-card">
         <button class="ca-modal__item" type="button" data-ca-target-id="${escapeHtml(targetId)}" data-ca-action-key="${escapeHtml(mealKey)}">
-          ${renderRowCopyHtml(copy)}
+          ${renderRowCopyHtml(copy, isBackdatedEdit(entry, a))}
           ${chevronSvg(false)}
         </button>
         ${items ? `<div class="ca-modal__meal-divider"></div><ul class="ca-modal__meal-products">${items}</ul>${extra}` : ''}
@@ -454,7 +497,7 @@
   function renderActionRowHtml(a, targetId, entry) {
     const copy = actionRowCopy(a);
     const key = actionKey(entry, a);
-    return `<li><button class="ca-modal__item" type="button" data-ca-target-id="${escapeHtml(targetId)}" data-ca-action-key="${escapeHtml(key)}">${renderRowCopyHtml(copy)}${chevronSvg(false)}</button></li>`;
+    return `<li><button class="ca-modal__item" type="button" data-ca-target-id="${escapeHtml(targetId)}" data-ca-action-key="${escapeHtml(key)}">${renderRowCopyHtml(copy, isBackdatedEdit(entry, a))}${chevronSvg(false)}</button></li>`;
   }
 
   function renderRepeatGroupHtml(action, registerTarget, entry) {
@@ -477,7 +520,7 @@
       <li class="ca-modal__repeat-group">
         <button class="ca-modal__item ca-modal__item--repeat" type="button" data-ca-expand-repeat="${escapeHtml(key)}">
           ${badge}
-          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}</span>
+          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}${renderBackdatedHtml(isBackdatedGroup(action))}</span>
           ${chevronSvg(true)}
         </button>
         ${membersHtml ? `<ul class="ca-modal__repeat-members">${membersHtml}</ul>` : ''}
@@ -1032,7 +1075,7 @@
       <li class="ca-modal__repeat-group">
         <button class="ca-modal__item ca-modal__item--repeat" type="button" data-ca-target-id="${escapeHtml(targetId)}">
           ${badge}
-          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}</span>
+          <span class="ca-modal__item-copy"><b class="ca-modal__item-title">${escapeHtml(copy.title)}</b>${subHtml}${kcalHtml}${renderBackdatedHtml(isBackdatedGroup(action))}</span>
           ${chevronSvg(false)}
         </button>
       </li>
